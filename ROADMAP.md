@@ -9,9 +9,9 @@
 ## 📍 Statut actuel
 
 - **Version en cours** : v1 (MVP)
-- **Phase active** : Phase 1 — Setup technique
-- **Prochaine étape concrète** : Créer le projet Next.js (App Router, TypeScript, Tailwind)
-- **Dernière mise à jour** : _à remplir à la première session_
+- **Phase active** : Phase 2 — Authentification (code en place, en attente du projet Supabase pour test bout en bout)
+- **Prochaine étape concrète** : Créer le projet Supabase (Europe), renseigner `.env.local`, créer le compte utilisateur unique, puis tester le login. Ensuite Phase 3 — Base de données.
+- **Dernière mise à jour** : 2026-06-01
 
 ---
 
@@ -30,19 +30,19 @@
 > Objectif : remplacer mon Google Sheets actuel et utiliser Velta au quotidien.
 
 ### Phase 1 — Setup technique
-- [ ] Créer projet Next.js (App Router, TypeScript, Tailwind)
-- [ ] Initialiser repo GitHub + lier à Vercel
+- [x] Créer projet Next.js (App Router, TypeScript, Tailwind)
+- [ ] Initialiser repo GitHub + lier à Vercel _(git local initialisé + premier commit ✅ ; reste : dépôt distant GitHub + liaison Vercel)_
 - [ ] Créer projet Supabase (région Europe)
-- [ ] Configurer variables d'environnement (Supabase URL + anon key)
+- [ ] Configurer variables d'environnement (Supabase URL + anon key) _(fichiers `.env.local` + `.env.example` créés avec clés vides ✅ ; reste : renseigner les vraies valeurs Supabase)_
 - [ ] Premier déploiement Vercel (page "Hello world")
 - [ ] Vérifier que la page s'affiche bien sur iPhone via l'URL Vercel
 
 ### Phase 2 — Authentification
-- [ ] Installer client Supabase
-- [ ] Créer mon compte utilisateur unique manuellement dans Supabase
-- [ ] Page de login (email + mot de passe)
-- [ ] Middleware d'authentification (redirection si non connecté)
-- [ ] Bouton déconnexion
+- [x] Installer client Supabase _(`@supabase/supabase-js` + `@supabase/ssr` ✅ ; clients navigateur/serveur dans `src/lib/supabase/`)_
+- [ ] Créer mon compte utilisateur unique manuellement dans Supabase _(à faire manuellement une fois le projet Supabase créé)_
+- [x] Page de login (email + mot de passe) _(`src/app/(auth)/login/page.tsx`, charte graphique appliquée)_
+- [x] Middleware d'authentification (redirection si non connecté) _(Next.js 16 : `middleware` renommé en **`proxy`** → `src/proxy.ts`)_
+- [x] Bouton déconnexion _(`src/app/logout-button.tsx` sur la page d'accueil)_
 
 ### Phase 3 — Base de données
 - [ ] Créer les tables : `categories`, `monthly_budgets`, `transactions`, `monthly_settings`, `flore_payments`
@@ -212,4 +212,5 @@ Je peux remplacer complètement mon Google Sheets actuel. Je saisis mes dépense
 
 | Date | Phase | Ce qui a été fait | Bloquant / point d'attention |
 |---|---|---|---|
-| | | | |
+| 2026-06-01 | Phase 1 | Scaffolding Next.js 16 (App Router, TS, Tailwind v4, src-dir, alias `@/*`). Git local init + 1er commit. `.env.local` + `.env.example` (clés Supabase vides). `page.tsx` réduit à `<h1>Velta</h1>`. `.gitignore` adapté (`!.env.example`, ignore `*:Zone.Identifier`). | À faire manuellement : créer le dépôt GitHub distant, le projet Supabase (Europe) + renseigner les valeurs d'env, lier Vercel, déployer, tester sur iPhone. Next.js installé en **v16** (breaking changes vs versions connues — cf. AGENTS.md, lire `node_modules/next/dist/docs/` avant de coder). |
+| 2026-06-01 | Phase 2 | Auth Supabase : install `@supabase/supabase-js` + `@supabase/ssr`. Clients `src/lib/supabase/{client,server}.ts` (cookies `getAll`/`setAll`, `cookies()` async). Page login `src/app/(auth)/login/page.tsx` (signInWithPassword, redirection `/`, message d'erreur). Bouton déconnexion `src/app/logout-button.tsx`. Charte graphique appliquée (`globals.css` : palette/Helvetica/radius ; `layout.tsx` : lang `fr`, titre Velta, retrait Geist + dark mode). `npm run build` ✅. | **Next.js 16 a déprécié `middleware` → renommé `proxy`** : créé `src/proxy.ts` (et non `src/middleware.ts` demandé) pour respecter la convention/dépréciation (cf. AGENTS.md). **L'auth ne fonctionnera réellement qu'une fois** le projet Supabase créé, `.env.local` rempli et le compte utilisateur créé dans Supabase. Ajout des tokens charte dans `globals.css` (normalement Phase 4) car requis pour styler le login. |
