@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui'
 
 export function LogoutButton() {
   const router = useRouter()
@@ -17,13 +18,8 @@ export function LogoutButton() {
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleLogout}
-      disabled={loading}
-      className="rounded-[var(--radius-control)] border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-    >
+    <Button variant="secondary" onClick={handleLogout} disabled={loading}>
       {loading ? 'Déconnexion…' : 'Se déconnecter'}
-    </button>
+    </Button>
   )
 }

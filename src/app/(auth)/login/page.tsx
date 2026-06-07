@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { Button, Card, Input } from '@/components/ui'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -33,17 +34,17 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-full items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm rounded-[var(--radius-card)] border border-border bg-surface p-8">
-        <h1 className="mb-1 text-2xl font-bold text-foreground">Velta</h1>
-        <p className="mb-8 text-sm text-muted">Connecte-toi pour continuer.</p>
+    <main className="flex min-h-full items-center justify-center px-[18px] py-12">
+      <Card className="w-full max-w-sm p-8">
+        <h1 className="mb-1 text-2xl font-bold tracking-tight text-ink">Velta</h1>
+        <p className="mb-8 text-sm text-ink-2">Connecte-toi pour continuer.</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="email" className="text-sm text-muted">
+            <label htmlFor="email" className="text-sm text-ink-2">
               Email
             </label>
-            <input
+            <Input
               id="email"
               name="email"
               type="email"
@@ -51,15 +52,14 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="rounded-[var(--radius-control)] border border-border bg-background px-3 py-2 text-base text-foreground outline-none focus:border-foreground"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="password" className="text-sm text-muted">
+            <label htmlFor="password" className="text-sm text-ink-2">
               Mot de passe
             </label>
-            <input
+            <Input
               id="password"
               name="password"
               type="password"
@@ -67,25 +67,20 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="rounded-[var(--radius-control)] border border-border bg-background px-3 py-2 text-base text-foreground outline-none focus:border-foreground"
             />
           </div>
 
           {error && (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-down" role="alert">
               {error}
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-2 rounded-[var(--radius-control)] bg-accent px-4 py-2.5 text-base font-medium text-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
+          <Button type="submit" disabled={loading} className="mt-2 w-full">
             {loading ? 'Connexion…' : 'Se connecter'}
-          </button>
+          </Button>
         </form>
-      </div>
+      </Card>
     </main>
   )
 }

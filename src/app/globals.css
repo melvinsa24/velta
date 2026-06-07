@@ -1,34 +1,82 @@
 @import "tailwindcss";
 
-/* Charte graphique Velta (cf. SPECS.md §3). Pas de mode sombre en v1. */
-:root {
-  --background: #fdfcfb; /* Fond principal */
-  --surface: #f4f2ed; /* Surfaces / panneaux / cartes */
-  --foreground: #1a1b1f; /* Texte principal */
-  --muted: #79766f; /* Texte secondaire */
-  --accent: #cff24a; /* Accent (actions, signaux) */
-  --border: #e5e2dc; /* Bordures fines */
+/*
+ * Charte graphique Velta — source unique : VELTA_DESIGN_SYSTEM.md.
+ * Light only (pas de dark mode v1). Une seule typo (Helvetica), un seul rayon
+ * (10px ; pilules & avatar ronds). Le lime (--accent) est un signal rare.
+ */
 
-  --radius-card: 10px; /* Coins arrondis cartes/panneaux */
-  --radius-control: 6px; /* Coins arrondis boutons et inputs */
+:root {
+  /* Couleurs */
+  --bg: #f4f5f7; /* Fond d'application (blanc froid) */
+  --surface: #ffffff; /* Cartes, listes, barres */
+  --surface-2: #f8f9fb; /* Fonds internes, pistes de jauge */
+  --ink: #0c0e12; /* Texte principal ET carte héro */
+  --ink-2: #5b6472; /* Texte secondaire */
+  --ink-3: #9ba3af; /* Texte tertiaire, méta, icônes inactives */
+  --border: #eceef1; /* Séparateurs, contours de cartes */
+  --border-2: #e0e3e8; /* Contours plus marqués */
+  --card-ink: #0c0e12; /* Fond de la carte héro */
+  --accent: oklch(0.9 0.19 124); /* ≈ #C5F23F — lime fluo : CTA, onglet actif, jauge */
+  --accent-press: oklch(0.85 0.19 124); /* État pressé de l'accent */
+  --accent-ink: #0c0e12; /* Texte/icône posé SUR l'accent (toujours sombre) */
+  --up: oklch(0.6 0.12 155); /* ≈ #1F9D6B — micro-indicateur positif */
+  --down: oklch(0.62 0.16 25); /* ≈ #DB5A4C — micro-indicateur négatif */
+
+  /* Rayons */
+  --r: 10px; /* Cartes, listes, héro, boutons, inputs, icônes carrées */
+  --r-full: 999px; /* Pilules, chips, jauges, avatar */
+
+  /* Typo */
+  --font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /* Ombres */
+  --shadow-card: 0 1px 2px rgba(12, 14, 18, 0.04); /* Carte au repos */
+  --shadow-card-hover: 0 6px 16px -8px rgba(12, 14, 18, 0.22); /* Carte au hover */
+  --shadow-hero: 0 18px 40px -20px rgba(12, 14, 18, 0.5); /* Carte héro */
+  --shadow-accent: 0 10px 22px -6px rgba(160, 200, 30, 0.6); /* Bouton accent */
 }
 
+/*
+ * Pont vers les utilitaires Tailwind v4 (config CSS-first : pas de
+ * tailwind.config.ts en v4). Les valeurs pointent vers les variables :root
+ * ci-dessus → bg-bg, bg-surface, text-ink, text-ink-2, border-border,
+ * bg-accent, text-accent-ink, rounded-card, shadow-card, etc.
+ */
 @theme inline {
-  --color-background: var(--background);
+  --color-bg: var(--bg);
   --color-surface: var(--surface);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-accent: var(--accent);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
   --color-border: var(--border);
+  --color-border-2: var(--border-2);
+  --color-card-ink: var(--card-ink);
+  --color-accent: var(--accent);
+  --color-accent-press: var(--accent-press);
+  --color-accent-ink: var(--accent-ink);
+  --color-up: var(--up);
+  --color-down: var(--down);
 
-  --radius-card: var(--radius-card);
-  --radius-control: var(--radius-control);
+  --radius-card: var(--r);
+  --radius-full: var(--r-full);
 
-  --font-sans: Helvetica, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-card-hover: var(--shadow-card-hover);
+  --shadow-hero: var(--shadow-hero);
+  --shadow-accent: var(--shadow-accent);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+}
+
+/* Montants : chiffres alignés (cf. design system, typographie). */
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
