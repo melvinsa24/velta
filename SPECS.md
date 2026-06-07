@@ -1,26 +1,14 @@
-# Velta — Specs
 
-> Dashboard financier personnel. Mono-utilisateur (Melvin). Mobile-first, installable comme PWA sur iPhone via Safari.
+# Dashboard financier personnel — Spécifications
 
----
-
-## 0. Comment travailler avec ce fichier
-
-**Ce fichier est la source de vérité du projet.** Toute décision produit, métier, ou data passe par ici.
-
-Règles de collaboration avec Claude Code :
-
-- **Lire en priorité à chaque session** : au minimum le sommaire + la section concernée par la tâche en cours.
-- **Ne jamais dévier** : si une demande de l'utilisateur contredit les specs, signaler le conflit avant de coder.
-- **Pas de feature non spécifiée** : si une idée nouvelle surgit, on l'ajoute d'abord à `ROADMAP.md`, on ne l'improvise pas dans le code.
-- **Suivre l'ordre de la roadmap** : ne pas anticiper sur des phases ultérieures, même si "ce serait pas long".
-- **Commenter en français** pour le métier (logique, calculs), code technique standard en anglais.
+> Application web personnelle de gestion de budget. Mono-utilisateur (Melvin). Architecture mobile-first, installable comme PWA sur iPhone via Safari.
+> Nom de l'application : Velta
 
 ---
 
 ## 1. Vision produit
 
-Velta me permet de :
+Un dashboard financier qui me permet de :
 
 1. Définir un **budget prévisionnel mensuel** par catégorie
 2. Suivre mes **dépenses réelles** au fil du mois (saisie rapide depuis mobile)
@@ -29,7 +17,7 @@ Velta me permet de :
 5. **Simuler** l'impact d'une dépense ponctuelle sur mon budget mensuel
 6. Avoir un **récap annuel** avec graphiques
 
-**Philosophie** : pas de connexion bancaire, saisie manuelle. L'outil est un coach, pas un tracker automatique.
+**Philosophie** : pas de connexion bancaire, je saisis manuellement. L'outil est un coach, pas un tracker automatique.
 
 ---
 
@@ -37,7 +25,7 @@ Velta me permet de :
 
 - **Framework** : Next.js (App Router) + TypeScript
 - **Style** : Tailwind CSS
-- **Base de données + Auth** : Supabase (plan gratuit, région Europe)
+- **Base de données + Auth** : Supabase (plan gratuit)
 - **Hébergement** : Vercel (plan gratuit)
 - **Graphiques** : Recharts
 - **PWA** : configuration pour ajout à l'écran d'accueil iOS
@@ -46,33 +34,23 @@ Velta me permet de :
 
 ## 3. Charte graphique
 
-### Couleurs (variables CSS dans `globals.css`)
+> **Source unique de vérité : `VELTA_DESIGN_SYSTEM.md`** (à la racine du projet).
+>
+> Ce fichier contient l'intégralité des décisions de design : tokens couleurs (variables CSS + équivalents Tailwind), typographie, rayons, espacement, ombres, composants de l'écran dashboard, états & interactions, do/don't.
+>
+> **Aucune décision de design ne doit être prise en dehors de ce fichier.** Si un point n'y est pas couvert, demander avant de coder — ne pas improviser.
 
-| Usage | Couleur |
-|---|---|
-| Fond principal | `#FDFCFB` |
-| Surfaces / panneaux / cartes | `#F4F2ED` |
-| Texte principal | `#1A1B1F` |
-| Texte secondaire | `#79766F` |
-| Accent (actions, signaux) | `#CFF24A` |
-| Bordures fines | `#E5E2DC` |
+### Principes directeurs (rappels)
 
-### Typographie
-
-- Police : **Helvetica** (fallback `Helvetica Neue, Arial, sans-serif`)
-- Hiérarchie : titre 24-32px / sous-titre 18px / corps 14-16px / petit 12px
-- Pas de mode sombre en v1
-
-### Style général
-
-- Coins arrondis : **10px** sur cartes/panneaux, **6px** sur boutons et inputs
-- Bordures fines (1px `#E5E2DC`) plutôt que des ombres
-- Beaucoup d'espace blanc, design épuré
-- Signaux couleur pour les écarts budget : vert = ok, orange = vigilance, rouge = dépassement
+- **Light only**, pas de dark mode global en v1. Une seule carte « héro » est en near-black (`--ink`), c'est un accent de contraste, pas un thème sombre.
+- **Mobile-first** : cibles tactiles ≥ 44px, une colonne.
+- **Accent lime rare** : 5 à 10 % de la surface visible maximum. Un seul élément lime visible par zone d'écran. Le lime est un *signal*, pas une décoration.
+- **Une seule typo** : Helvetica.
+- **Un seul rayon** : 10px partout, sauf pilules/chips/jauges/avatar (ronds, `999px`).
 
 ### Code couleur catégories
 
-Chaque catégorie créée par l'utilisateur a une couleur personnalisable (palette de 12 à 16 couleurs prédéfinies harmonieuses avec la charte).
+Chaque catégorie créée par l'utilisateur a une couleur personnalisable (sélecteur avec palette de 12-16 couleurs prédéfinies harmonieuses avec la charte).
 
 ---
 
@@ -80,20 +58,36 @@ Chaque catégorie créée par l'utilisateur a une couleur personnalisable (palet
 
 ### Navigation
 
-- **Menu burger** en haut à gauche (mobile et desktop)
-- Onglets accessibles depuis le menu :
-  1. Dashboard du mois en cours
-  2. Budget prévisionnel
-  3. Saisie / liste des transactions
-  4. Répartition Flore
-  5. Simulateur
-  6. Récap annuel
-  7. Paramètres (catégories, objectif %, export)
+**Tab bar basse** (mobile), comportant 4 onglets + un bouton **+** central pour la saisie rapide d'une transaction. Détails visuels (verre dépoli, point lime sur l'onglet actif) dans `VELTA_DESIGN_SYSTEM.md`.
+
+Les 4 onglets principaux à définir au design, sachant qu'il faut couvrir au total 7 écrans :
+
+1. Dashboard du mois en cours
+2. Budget prévisionnel
+3. Liste des transactions
+4. Répartition Flore
+5. Simulateur
+6. Récap annuel
+7. Réglages (catégories, objectif %, export, compte)
+
+**Structure validée de la tab bar :**
+
+| Position | Écran | Icône Lucide |
+|---|---|---|
+| 1 | Dashboard | `LayoutDashboard` |
+| 2 | Budget | `Wallet` |
+| 3 | **+** (saisie transaction) | `Plus` — bouton lime central |
+| 4 | Flore | `Users` |
+| 5 | Réglages | `Settings` |
+
+Les écrans Transactions, Simulateur et Récap annuel sont accessibles depuis les onglets principaux (Transactions depuis Dashboard, Simulateur depuis Budget, Récap annuel depuis Dashboard ou Réglages).
+
+**Bibliothèque d'icônes : Lucide React** (`lucide-react`). Aucune autre bibliothèque d'icônes ne doit être utilisée.
 
 ### Layout mobile
 
-- Bottom navigation envisageable en alternative au burger pour les 3-4 actions principales (à arbitrer au design).
-- Bouton flottant "+" pour saisir rapidement une transaction depuis n'importe quel écran.
+- Bouton **+** central de la tab bar : saisie rapide d'une transaction depuis n'importe quel écran.
+- Marge d'écran : 18px (cf. design system).
 
 ---
 
@@ -164,33 +158,35 @@ Chaque catégorie créée par l'utilisateur a une couleur personnalisable (palet
 - Bouton "Nouveau mois" (voir 6.2)
 - Bouton "Archiver ce mois"
 
-**Bloc résumé** :
-- **Reste à dépenser réel** : `revenus du mois − Σ(transactions réelles)` → gros chiffre central
-- **Reste à dépenser après charges fixes prévues** : `revenus − Σ(transactions) − Σ(budgets prévus non encore dépensés des besoins fixes)`
-- **Ratio actuel besoins / envies / épargne** vs objectif → 3 jauges horizontales avec code couleur (vert si dans la cible ±5%, orange 5-15%, rouge >15%)
+**Carte héro (Reste à dépenser)** — fond `--ink`, voir design system :
+- **Reste à dépenser réel** : `revenus du mois − Σ(transactions réelles)` → gros chiffre central tabulaire
+- **Reste à dépenser après charges fixes prévues** : `revenus − Σ(transactions) − Σ(budgets prévus non encore dépensés des besoins fixes)` (affichage secondaire)
+
+**Bloc ratios** :
+- **Ratio actuel besoins / envies / épargne** vs objectif → 3 jauges horizontales (jauge lime sur piste `--surface-2`) avec code couleur sémantique (vert `--up` si dans la cible ±5%, orange en vigilance 5-15%, rouge `--down` >15%)
 
 **Bloc catégories** :
-- Liste des catégories actives ce mois
-- Pour chaque ligne : nom, couleur, budget prévu, dépensé réel, barre de progression
-- Si dépassement → bordure orange/rouge + petit message d'alerte (ex: "⚠ Tu as dépassé ton budget courses de 23€")
+- Liste des catégories actives ce mois sur cartes `--surface`
+- Pour chaque ligne : icône carrée (10px) à la couleur de la catégorie, nom, budget prévu, dépensé réel, mini-jauge `--ink`
+- Si dépassement → bordure rouge `--down` + petit message d'alerte ("⚠ Tu as dépassé ton budget courses de 23€")
 
 **Notifications visuelles (in-app uniquement)** :
 - Approche du plafond (>80% utilisé) → couleur orange
-- Dépassement → couleur rouge + message
+- Dépassement → couleur rouge `--down` + message
 - Aucune notif push ni mail
 
 **Note du mois** : champ texte libre en bas du dashboard, sauvegarde auto.
 
 ### 6.2 Workflow "Nouveau mois"
 
-Au clic sur "Nouveau mois" :
+Quand je clique sur "Nouveau mois" :
 
-1. Sauvegarde du mois en cours (status `closed`) mais reste accessible (réouverture possible si erreur)
-2. Création d'un nouveau mois `in_progress`
-3. **Reprise des catégories `besoins_fixes` et `besoins_variables`** avec leurs montants prévisionnels du mois précédent
-4. **Conservation des libellés** des catégories envies/épargne mais remise des montants à 0
+1. L'outil **sauvegarde** le mois en cours (status `closed`) mais le rend accessible (je peux le rouvrir si erreur)
+2. Crée un nouveau mois `in_progress`
+3. **Reprend les catégories de type `besoins_fixes` et `besoins_variables`** avec leurs montants prévisionnels du mois précédent
+4. **Conserve les libellés** des catégories envies/épargne mais remet leurs montants à 0
 5. Réel à zéro pour toutes
-6. Pour les **catégories crédit** : décrément de `credit_remaining_months` ; si 0 → la catégorie disparaît automatiquement du nouveau mois (mais reste dans les paramètres pour historique)
+6. Pour les **catégories type crédit** : décrémente `credit_remaining_months` ; si 0 → la catégorie disparaît automatiquement du nouveau mois (mais reste dans les paramètres pour historique)
 
 **Erreur de manip** : un bouton "Rouvrir ce mois" permet de remettre un mois fermé en statut `in_progress`.
 
@@ -205,12 +201,12 @@ Au clic sur "Nouveau mois" :
 
 ### 6.4 Saisie d'une transaction
 
-**Écran rapide** (accessible via bouton "+" flottant) :
+**Écran rapide** (accessible via bouton **+** central de la tab bar) :
 - **Date** : pré-remplie à aujourd'hui, modifiable
 - **Montant** (€)
 - **Catégorie** : sélecteur cascade (parent_type → catégorie). Si la catégorie n'existe pas, bouton "Créer une nouvelle catégorie" qui ouvre une modale rapide.
 - **Description** : champ texte libre (ex: "coiffeur")
-- **Bouton "Enregistrer"**
+- **Bouton "Enregistrer"** (CTA accent lime)
 
 **Vue liste des transactions** :
 - Liste chronologique inversée du mois en cours
@@ -219,11 +215,11 @@ Au clic sur "Nouveau mois" :
 
 ### 6.5 Répartition Flore
 
-**Inputs (en haut de l'écran)** :
+**Inputs** (en haut de l'écran) :
 - Mes revenus du mois : préremplis depuis `monthly_settings.revenue_melvin`
 - Revenus de Flore : préremplis depuis `monthly_settings.revenue_flore`
 - APL : préremplie depuis `monthly_settings.apl`
-- Si revenu Flore = 0 → toutes les charges partagées sont automatiquement 100% à moi (afficher un message explicatif)
+- Si revenu Flore = 0 → toutes les charges partagées sont automatiquement 100% à moi (lui afficher un message explicatif)
 
 **Affichage** :
 - Ratio de répartition (ex: 73,6% / 26,4%)
@@ -231,7 +227,7 @@ Au clic sur "Nouveau mois" :
   - Loyer (prorata) : ma part X€, part de Flore Y€
   - Énergie (50/50) : ma part X€, part de Flore X€
 - APL (prorata, à reverser à Flore)
-- **Total : "Flore me doit ce mois X€"** (gros chiffre)
+- **Total : "Flore me doit ce mois X€"** (gros chiffre, idéalement sur carte héro `--ink`)
 
 **Module "Remboursements de Flore"** :
 - Liste des remboursements enregistrés ce mois
@@ -254,7 +250,7 @@ Au clic sur "Nouveau mois" :
   - Nouveau "reste à dépenser"
   - Nouveau ratio besoins/envies/épargne vs objectif
   - Indication "Cette dépense te ferait sortir de ton objectif épargne" (si applicable)
-- Bouton "Convertir en vraie transaction" si je décide d'y aller
+- Bouton "Convertir en vraie transaction" si je décide d'y aller (CTA accent lime)
 - Bouton "Effacer la simulation"
 
 > Le simulateur ne modifie jamais la base de données tant que je ne convertis pas.
@@ -264,7 +260,7 @@ Au clic sur "Nouveau mois" :
 ### 6.7 Récap annuel
 
 **Affichage** :
-1. **Graphiques** (priorité) :
+1. **Graphiques** (priorité) — palette restreinte au design system (`--ink`, `--accent`, `--up`, `--down`, `--ink-2` pour les séries secondaires) :
    - Courbe d'évolution mensuelle de mes revenus
    - Courbe d'évolution besoins / envies / épargne (3 séries)
    - Barres empilées : répartition mensuelle besoins/envies/épargne
@@ -275,7 +271,7 @@ Au clic sur "Nouveau mois" :
 
 Les mois non remplis affichent un tiret, pas un `#DIV/0!`.
 
-### 6.8 Paramètres
+### 6.8 Réglages
 
 - **Catégories** : CRUD complet, avec couleur, mode de partage, flag crédit
 - **Objectif %** : 3 champs (besoins / envies / épargne). Quand 2 sont remplis, le 3e se complète automatiquement à `100 − somme des deux autres`. Total doit faire 100%.
@@ -289,73 +285,43 @@ Les mois non remplis affichent un tiret, pas un `#DIV/0!`.
 - Compte unique (le mien)
 - Login email + mot de passe via Supabase Auth
 - Pas de signup public (compte créé manuellement dans Supabase au lancement)
-- Session persistante (pas de reconnexion à chaque visite)
+- Session persistante (je ne me reconnecte pas à chaque fois)
 
 ---
 
-## 8. Règles métier critiques
+## 8. Comportements spéciaux à respecter
 
-> Ces règles sont l'âme du projet. Toute implémentation qui les viole introduit des bugs invisibles. À relire avant chaque feature qui touche aux calculs.
-
-1. **Aucune valeur calculée n'est stockée.** Tous les ratios, restes, totaux sont calculés à la volée depuis les données brutes. Évite la désynchronisation à tout prix.
-2. **Les remboursements Flore ne touchent jamais aux ratios besoins/envies/épargne.** Module isolé.
-3. **Si revenu Flore = 0** sur un mois, basculer tout en 100% perso, afficher un message informatif.
-4. **Les transactions du mois en cours sont saisissables même depuis un écran d'archive** : on est toujours implicitement sur "le mois en cours" pour la saisie, sauf si je sélectionne explicitement un autre mois dans le sélecteur.
-5. **Les charges programmées non saisies n'apparaissent PAS dans le "reste à dépenser réel"**, mais elles apparaissent en colonne "objectif" comme référence visuelle.
-6. **Toutes les sommes en `numeric` côté base**, jamais en `float` (précision décimale critique pour de l'argent).
-7. **Format date ISO partout** côté code et base, formatage français uniquement à la présentation.
+1. **Aucune valeur calculée n'est stockée** : tous les ratios, restes, totaux sont calculés à la volée depuis les données brutes. Évite la désynchronisation.
+2. **Les remboursements Flore ne touchent jamais aux ratios besoins/envies/épargne**. Module isolé.
+3. **Si revenu Flore = 0** sur un mois, basculer tout en 100% perso, afficher message informatif.
+4. **Les transactions du mois en cours sont saisissables même si je suis sur un écran d'archive** : on est toujours implicitement sur "le mois en cours" pour la saisie, sauf si je sélectionne explicitement un autre mois dans le sélecteur.
+5. **Les charges programmées non saisies n'apparaissent PAS dans le "reste à dépenser réel"**. Mais elles apparaissent en colonne "objectif" qui me sert de référence visuelle.
 
 ---
 
-## 9. Conventions de code
+## 9. Étapes de développement recommandées
 
-- Code propre, fonctions courtes, composants réutilisables.
-- Commentaires en français pour la logique métier, anglais pour la technique standard.
-- Privilégier les **Server Components Next.js** quand possible. Client Components uniquement si interactivité requise (`'use client'` en haut du fichier).
-- Pas de re-render inutile : `useMemo` / `useCallback` quand un calcul est lourd.
-- Debounce sur les inputs budget (300ms) pour éviter les requêtes intempestives.
-- Tester sur mobile (Chrome DevTools responsive ou device réel) à chaque écran avant validation.
-- Pas de librairie ajoutée sans discussion — chaque dépendance est un coût de maintenance.
+(Voir `ROADMAP.md` pour le détail)
 
----
-
-## 10. Structure du projet (proposée)
-
-```
-velta/
-├── app/                      # App Router Next.js (pages, layouts)
-│   ├── (auth)/               # Routes liées à l'auth (login, etc.)
-│   ├── dashboard/
-│   ├── budget/
-│   ├── transactions/
-│   ├── flore/
-│   ├── simulateur/
-│   ├── recap/
-│   ├── parametres/
-│   └── layout.tsx
-├── components/               # Composants UI réutilisables
-│   ├── ui/                   # Primitives (Button, Card, Input, Select)
-│   └── ...                   # Composants métier
-├── lib/                      # Logique métier, helpers, calculs
-│   ├── supabase/             # Client Supabase + helpers
-│   ├── calculs/              # Calculs ratios, restes, prorata
-│   └── utils/                # Helpers génériques (dates, formats)
-├── types/                    # Types TypeScript partagés
-├── public/                   # Assets statiques + manifest PWA
-├── SPECS.md
-├── ROADMAP.md
-└── README.md
-```
-
-Les calculs métier (prorata Flore, ratios besoins/envies/épargne, reste à dépenser) vivent dans `lib/calculs/` et sont **purs** (entrées → sortie, pas d'effet de bord). Ça les rend testables et réutilisables côté serveur et client.
+1. Setup projet + Supabase + auth
+2. Modèle de données + migrations
+3. CRUD catégories + paramètres
+4. Saisie budget prévisionnel
+5. Saisie transactions + liste
+6. Dashboard mensuel (sans graphiques)
+7. Workflow nouveau mois / archivage
+8. Module répartition Flore
+9. Simulateur
+10. Récap annuel + graphiques
+11. Export CSV
+12. PWA + ajout écran accueil iOS
+13. Polish UI + animations
 
 ---
 
-## 11. Hors périmètre v1
+## 10. Hors périmètre v1 (à garder en tête pour v2+)
 
-Tout ce qui suit est volontairement reporté en v2 ou v3. Si l'envie d'y toucher arrive, c'est le signe qu'il faut d'abord finir la v1.
-
-- Pot commun "provisions" (sinking funds : cadeaux Noël, contrôle technique, etc.)
+- Pot commun "provisions" (sinking funds pour cadeaux Noël, contrôle technique, etc.)
 - Objectifs d'épargne nommés avec suivi cumulé (fonds urgence X€, voyage Y€)
 - Simulation long terme et changement de format objectif
 - Pilotage portefeuille d'investissement (PEA, CTO, cryptos)
@@ -365,4 +331,15 @@ Tout ce qui suit est volontairement reporté en v2 ou v3. Si l'envie d'y toucher
 - Catégorie "compte commun courses" plus fine
 - Stats avancées (top dépenses, tendances par catégorie)
 
-Le détail des phases et l'ordre exact sont dans `ROADMAP.md`.
+---
+
+## 11. Notes pour Claude Code
+
+- **Charte graphique** : la source unique est `VELTA_DESIGN_SYSTEM.md`. Lire ce fichier avant tout travail UI. Ne jamais inventer une couleur, une taille, un rayon ou une typo qui n'y figure pas.
+- Code propre, fonctions courtes, composants réutilisables.
+- Commentaires en français pour les parties métier.
+- Toutes les sommes en `numeric` côté base, jamais en `float`.
+- Format date ISO partout, affichage français à la présentation uniquement.
+- Privilégier les Server Components Next.js quand possible.
+- Tester sur mobile (Chrome DevTools responsive) à chaque écran.
+- Performance : pas de re-render inutile, debounce sur les inputs budget.
