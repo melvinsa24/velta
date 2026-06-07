@@ -10,7 +10,7 @@
 
 - **Version en cours** : v1 (MVP)
 - **Phase active** : Phase 4 — Charte graphique (Phase 3 Base de données terminée)
-- **Prochaine étape concrète** : Définir les variables CSS dans `globals.css` (partiellement fait en Phase 2), puis composants de base (Button, Card, Input, Select) et layout avec menu burger.
+- **Prochaine étape concrète** : Aligner `globals.css` sur les tokens de `VELTA_DESIGN_SYSTEM.md` (partiellement fait en Phase 2), installer `lucide-react`, puis composants de base (Button, Card, Input, Select) et layout avec tab bar basse.
 - **Dernière mise à jour** : 2026-06-07
 
 ---
@@ -50,10 +50,12 @@
 - [x] Tester les insertions / lectures via le client Supabase _(lecture sur `categories` OK, RLS confirmée ; types TS dans `src/types/database.ts`)_
 
 ### Phase 4 — Charte graphique
-- [ ] Définir variables CSS (couleurs, polices, radius) dans `globals.css`
+> Source unique de vérité : `VELTA_DESIGN_SYSTEM.md`. Lire avant tout travail UI, ne rien inventer hors de ce fichier (cf. SPECS §3 et §11).
+- [ ] Aligner les variables CSS (couleurs, typo, rayons, espacement) de `globals.css` sur les tokens de `VELTA_DESIGN_SYSTEM.md`
+- [ ] Installer `lucide-react` (seule bibliothèque d'icônes autorisée, cf. SPECS §4)
 - [ ] Composants de base : Button, Card, Input, Select
-- [ ] Layout général avec menu burger
-- [ ] Navigation entre les écrans
+- [ ] Layout général avec **tab bar basse** (4 onglets + bouton **+** central, cf. SPECS §4) — _et non un menu burger (ancienne charte abandonnée v2)_
+- [ ] Navigation entre les écrans (Dashboard / Budget / Flore / Réglages ; Transactions, Simulateur, Récap accessibles depuis les onglets)
 
 ### Phase 5 — Catégories & paramètres
 - [ ] Écran paramètres
