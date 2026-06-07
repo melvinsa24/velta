@@ -9,9 +9,9 @@
 ## 📍 Statut actuel
 
 - **Version en cours** : v1 (MVP)
-- **Phase active** : Phase 2 — Authentification (code en place, en attente du projet Supabase pour test bout en bout)
-- **Prochaine étape concrète** : Créer le projet Supabase (Europe), renseigner `.env.local`, créer le compte utilisateur unique, puis tester le login. Ensuite Phase 3 — Base de données.
-- **Dernière mise à jour** : 2026-06-01
+- **Phase active** : Phase 4 — Charte graphique (Phase 3 Base de données terminée)
+- **Prochaine étape concrète** : Définir les variables CSS dans `globals.css` (partiellement fait en Phase 2), puis composants de base (Button, Card, Input, Select) et layout avec menu burger.
+- **Dernière mise à jour** : 2026-06-07
 
 ---
 
@@ -45,9 +45,9 @@
 - [x] Bouton déconnexion _(`src/app/logout-button.tsx` sur la page d'accueil)_
 
 ### Phase 3 — Base de données
-- [ ] Créer les tables : `categories`, `monthly_budgets`, `transactions`, `monthly_settings`, `flore_payments`
-- [ ] Configurer Row Level Security (même si mono-user, bonne pratique)
-- [ ] Tester les insertions / lectures via le client Supabase
+- [x] Créer les tables : `categories`, `monthly_budgets`, `transactions`, `monthly_settings`, `flore_payments` _(migration `supabase/migrations/001_initial_schema.sql`, exécutée via SQL Editor)_
+- [x] Configurer Row Level Security (même si mono-user, bonne pratique) _(RLS activée + policy « auth users only » `auth.uid() IS NOT NULL` en FOR ALL sur les 5 tables)_
+- [x] Tester les insertions / lectures via le client Supabase _(lecture sur `categories` OK, RLS confirmée ; types TS dans `src/types/database.ts`)_
 
 ### Phase 4 — Charte graphique
 - [ ] Définir variables CSS (couleurs, polices, radius) dans `globals.css`
@@ -214,3 +214,4 @@ Je peux remplacer complètement mon Google Sheets actuel. Je saisis mes dépense
 |---|---|---|---|
 | 2026-06-01 | Phase 1 | Scaffolding Next.js 16 (App Router, TS, Tailwind v4, src-dir, alias `@/*`). Git local init + 1er commit. `.env.local` + `.env.example` (clés Supabase vides). `page.tsx` réduit à `<h1>Velta</h1>`. `.gitignore` adapté (`!.env.example`, ignore `*:Zone.Identifier`). | À faire manuellement : créer le dépôt GitHub distant, le projet Supabase (Europe) + renseigner les valeurs d'env, lier Vercel, déployer, tester sur iPhone. Next.js installé en **v16** (breaking changes vs versions connues — cf. AGENTS.md, lire `node_modules/next/dist/docs/` avant de coder). |
 | 2026-06-01 | Phase 2 | Auth Supabase : install `@supabase/supabase-js` + `@supabase/ssr`. Clients `src/lib/supabase/{client,server}.ts` (cookies `getAll`/`setAll`, `cookies()` async). Page login `src/app/(auth)/login/page.tsx` (signInWithPassword, redirection `/`, message d'erreur). Bouton déconnexion `src/app/logout-button.tsx`. Charte graphique appliquée (`globals.css` : palette/Helvetica/radius ; `layout.tsx` : lang `fr`, titre Velta, retrait Geist + dark mode). `npm run build` ✅. | **Next.js 16 a déprécié `middleware` → renommé `proxy`** : créé `src/proxy.ts` (et non `src/middleware.ts` demandé) pour respecter la convention/dépréciation (cf. AGENTS.md). **L'auth ne fonctionnera réellement qu'une fois** le projet Supabase créé, `.env.local` rempli et le compte utilisateur créé dans Supabase. Ajout des tokens charte dans `globals.css` (normalement Phase 4) car requis pour styler le login. |
+| 2026-06-07 | Phase 3 | Base de données. Migration `supabase/migrations/001_initial_schema.sql` : 5 tables (`categories`, `monthly_budgets`, `transactions`, `monthly_settings`, `flore_payments`) + 3 enums (`category_type`, `share_mode`, `budget_status`), triggers `updated_at`, RLS + policy « auth users only » (FOR ALL, `auth.uid() IS NOT NULL`) sur les 5 tables. Exécutée via SQL Editor. Types TS dans `src/types/database.ts` (Row/Insert/Update). Test de lecture sur `categories` OK puis fichier de test supprimé. | **Exécution manuelle** : la clé `.env.local` est une clé *publishable* (anon) qui ne peut pas faire de DDL → SQL passé à la main dans le SQL Editor. **`parent_type` = colonne `text` générée** (et non enum) : un `CASE` renvoyant du texte vers une colonne enum levait `column is of type parent_type but default expression is of type text`. Choix : colonne générée STORED `text` dérivée de `type` (seule valeur « calculée » stockée, mais auto-cohérente). **`monthly_settings` / `flore_payments` sans `created_at`/`updated_at`** (non listés dans SPECS §5, schéma respecté à la lettre). `on delete restrict` sur `transactions.category_id` pour ne pas effacer l'historique. Migration rendue rejouable (bloc `drop ... if exists` en tête) après un 1er run partiel. |
