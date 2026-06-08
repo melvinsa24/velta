@@ -30,6 +30,8 @@ Inspirations : Notion (calme, typographique) + Revolut (carte sombre vedette, fi
 | `--accent-ink` | `#0C0E12` | Texte/icône posé SUR l'accent (toujours sombre) |
 | `--up` | `oklch(0.60 0.12 155)` ≈ `#1F9D6B` | Micro-indicateur positif (montants +) |
 | `--down` | `oklch(0.62 0.16 25)` ≈ `#DB5A4C` | Micro-indicateur négatif |
+| `--warn` | `oklch(0.78 0.15 70)` ≈ `#D97706` | **Ambre** — état « vigilance » (hors cible budget, ±5 à ±15 % de l'objectif) |
+| `--warn-ink` | `#0C0E12` | Texte/icône posé SUR l'ambre (toujours sombre) |
 
 > **Règle d'accent.** Un seul élément lime visible par zone d'écran. Le lime est un *signal*, pas une décoration. Il se pose sur `--ink`, jamais en petit texte sur blanc (contraste insuffisant).
 
@@ -78,6 +80,8 @@ Base **4px**. Échelle : `4 · 8 · 12 · 16 · 20 · 24`. Gouttières de cartes
   --accent-ink: #0C0E12;
   --up: oklch(0.60 0.12 155);          /* ≈ #1F9D6B */
   --down: oklch(0.62 0.16 25);         /* ≈ #DB5A4C */
+  --warn: oklch(0.78 0.15 70);         /* ≈ #D97706 — état vigilance */
+  --warn-ink: #0C0E12;
   --r: 10px;
   --r-full: 999px;
   --font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -92,7 +96,7 @@ extend: {
     ink: { DEFAULT: '#0C0E12', 2: '#5B6472', 3: '#9BA3AF' },
     border: { DEFAULT: '#ECEEF1', 2: '#E0E3E8' },
     accent: { DEFAULT: '#C5F23F', ink: '#0C0E12' },
-    up: '#1F9D6B', down: '#DB5A4C',
+    up: '#1F9D6B', down: '#DB5A4C', warn: '#D97706',
   },
   borderRadius: { DEFAULT: '10px', full: '9999px' },
   fontFamily: { sans: ['Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'] },
