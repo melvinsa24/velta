@@ -27,7 +27,7 @@ export const CATEGORY_COLORS = [
   '#5B6472', // graphite
 ] as const
 
-/** Libellés FR des sous-types (le parent_type se déduit automatiquement en base). */
+/** Libellés FR des 5 catégories (niveau 2 de la hiérarchie). */
 export const CATEGORY_TYPE_LABELS: Record<CategoryType, string> = {
   besoins_fixes: 'Besoins fixes',
   besoins_variables: 'Besoins variables',
@@ -39,6 +39,19 @@ export const CATEGORY_TYPE_LABELS: Record<CategoryType, string> = {
 export const CATEGORY_TYPE_OPTIONS = (
   Object.keys(CATEGORY_TYPE_LABELS) as CategoryType[]
 ).map((value) => ({ value, label: CATEGORY_TYPE_LABELS[value] }))
+
+/**
+ * Mapping Catégorie → Type (parent). Le `parent_type` n'est plus une colonne
+ * générée en base (la table `categories` a disparu) : il se déduit ici depuis
+ * la catégorie figée de la dépense (SPECS §4).
+ */
+export const CATEGORY_PARENT: Record<CategoryType, ParentType> = {
+  besoins_fixes: 'besoin',
+  besoins_variables: 'besoin',
+  envies_velo: 'envie',
+  envies_autres: 'envie',
+  epargne: 'epargne',
+}
 
 /** Libellés FR des modes de partage avec Flore. */
 export const SHARE_MODE_LABELS: Record<ShareMode, string> = {

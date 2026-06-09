@@ -1,50 +1,19 @@
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
-import { createClient } from '@/lib/supabase/server'
-import {
-  currentMonthStart,
-  formatMonthLabel,
-  previousMonthStart,
-} from '@/lib/month'
-import { BudgetEditor } from './BudgetEditor'
-import type { BudgetLine } from './actions'
-import type { Category, MonthlySettings } from '@/types/database'
+import { Card } from '@/components/ui'
+import { currentMonthStart, formatMonthLabel } from '@/lib/month'
 
 /*
- * Écran Budget prévisionnel. Server Component : charge les catégories, les
- * dépenses nommées du mois courant (label + montant) et les réglages du mois
- * (revenu + objectifs %). Toute l'interaction (saisie inline du label et du
- * montant, ajout/suppression de dépenses, totaux, récap, création de catégorie)
- * est déléguée au client BudgetEditor.
+ * Écran Budget prévisionnel.
+ *
+ * ⚠ Phase 5bis — session 1 (backend) : le pivot modèle « Dépenses » a remplacé
+ * la table `categories` par `expenses`. L'UID de cet écran (hiérarchie
+ * Type > Catégorie > Dépenses, modale « Nouvelle dépense » via ExpenseForm) est
+ * refondue en session 2. Placeholder temporaire en attendant.
+ *
+ * Référence de l'ancienne implémentation : `BudgetEditor.tsx.bak`.
  */
 export default async function BudgetPage() {
-  const supabase = await createClient()
   const month = currentMonthStart()
-  const prevMonth = previousMonthStart(month)
-
-  const [categoriesRes, linesRes, prevLinesRes, settingsRes] =
-    await Promise.all([
-      supabase.from('categories').select('*').order('created_at'),
-      supabase
-        .from('monthly_budgets')
-        .select('id, category_id, label, planned_amount')
-        .eq('month', month)
-        .order('created_at'),
-      supabase.from('monthly_budgets').select('id').eq('month', prevMonth),
-      supabase
-        .from('monthly_settings')
-        .select('*')
-        .eq('month', month)
-        .maybeSingle(),
-    ])
-
-  const categories = (categoriesRes.data as Category[] | null) ?? []
-  const settings = (settingsRes.data as MonthlySettings | null) ?? null
-  const lines = (linesRes.data as BudgetLine[] | null) ?? []
-
-  // « Reprendre N-1 » : proposé seulement si N-1 a des dépenses ET que le mois
-  // courant est encore vide (la copie n'a pas de dédoublonnage).
-  const prevHasData = ((prevLinesRes.data as unknown[] | null) ?? []).length > 0
-  const canCopyPrevious = prevHasData && lines.length === 0
 
   return (
     <>
@@ -52,18 +21,13 @@ export default async function BudgetPage() {
         title="Budget"
         subtitle={`Prévisionnel · ${formatMonthLabel(month)}`}
       />
-      <BudgetEditor
-        month={month}
-        categories={categories}
-        lines={lines}
-        revenue={settings?.revenue_melvin ?? 0}
-        targets={{
-          needs: settings?.target_needs_pct ?? 50,
-          wants: settings?.target_wants_pct ?? 30,
-          savings: settings?.target_savings_pct ?? 20,
-        }}
-        canCopyPrevious={canCopyPrevious}
-      />
+      <Card className="flex flex-col gap-2">
+        <p className="text-sm font-medium text-ink">Refonte en cours</p>
+        <p className="text-sm text-ink-2">
+          L&apos;écran Budget est en cours de refonte suite au pivot modèle
+          « Dépenses » (Phase 5bis, session 2).
+        </p>
+      </Card>
     </>
   )
 }

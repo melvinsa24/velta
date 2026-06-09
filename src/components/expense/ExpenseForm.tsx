@@ -5,15 +5,22 @@ import { Button, Input, Select } from '@/components/ui'
 import { ColorPicker } from './ColorPicker'
 import {
   CATEGORY_COLORS,
+  CATEGORY_PARENT,
   CATEGORY_TYPE_OPTIONS,
   SHARE_MODE_OPTIONS,
 } from '@/lib/categoryMeta'
 import {
-  createCategory,
-  updateCategory,
-  type CategoryFormInput,
-} from '@/lib/actions/categories'
-import type { Category, CategoryType, ShareMode } from '@/types/database'
+  createExpense,
+  updateExpense,
+  type ExpenseFormInput,
+} from '@/lib/actions/expenses'
+import { upsertBudget } from '@/app/(app)/budget/actions'
+import type {
+  CategoryType,
+  Expense,
+  ParentType,
+  ShareMode,
+} from '@/types/database'
 
 /* Petit champ étiqueté, aligné sur le pattern du formulaire de login. */
 function Field({
@@ -35,27 +42,48 @@ function Field({
   )
 }
 
+/* Parse une saisie FR (virgule décimale tolérée) ; 0 si vide / invalide. */
+function parseAmount(value: string): number {
+  if (!value.trim()) return 0
+  const n = Number(value.replace(',', '.'))
+  return Number.isFinite(n) ? n : 0
+}
+
 /*
- * Formulaire de création / édition d'une catégorie. Nom, type (le parent_type
- * se déduit automatiquement en base), couleur, mode de partage, flag crédit.
- * Si « à crédit » est coché, 3 champs supplémentaires apparaissent.
+ * Formulaire de création / édition d'une DÉPENSE (SPECS §7.3). Champs : libellé,
+ * catégorie (5 valeurs fixes), couleur, mode de partage, flag crédit, et montant
+ * prévisionnel du mois en cours. Si « à crédit » est coché, 3 champs apparaissent.
  *
- * `defaultType` permet de pré-sélectionner le type à la création (ex : depuis
- * une section de l'écran Budget, on ouvre la modale déjà calée sur le bon
- * parent_type).
+ * `parentType` pré-filtre les catégories proposées (ex : depuis la section
+ * « Besoins » de l'écran Budget, seules les catégories Besoins sont offertes).
+ *
+ * Au submit :
+ *   - création → `expenses` + ligne `monthly_budgets` du mois courant ;
+ *   - édition  → met à jour `expenses` et le montant prévisionnel du mois courant.
  */
-export function CategoryForm({
+export function ExpenseForm({
   initial,
-  defaultType,
+  parentType,
+  month,
+  initialAmount,
   onDone,
 }: {
-  initial: Category | null
-  defaultType?: CategoryType
+  initial: Expense | null
+  parentType?: ParentType
+  month: string
+  initialAmount?: number
   onDone: () => void
 }) {
-  const [name, setName] = useState(initial?.name ?? '')
-  const [type, setType] = useState<CategoryType>(
-    initial?.type ?? defaultType ?? 'besoins_fixes',
+  // Catégories proposées : filtrées sur le parent_type si fourni.
+  const categoryOptions = parentType
+    ? CATEGORY_TYPE_OPTIONS.filter(
+        (o) => CATEGORY_PARENT[o.value] === parentType,
+      )
+    : CATEGORY_TYPE_OPTIONS
+
+  const [label, setLabel] = useState(initial?.label ?? '')
+  const [category, setCategory] = useState<CategoryType>(
+    initial?.category ?? categoryOptions[0]?.value ?? 'besoins_fixes',
   )
   const [color, setColor] = useState(initial?.color ?? CATEGORY_COLORS[0])
   const [shareMode, setShareMode] = useState<ShareMode>(
@@ -69,6 +97,7 @@ export function CategoryForm({
   const [totalRemaining, setTotalRemaining] = useState(
     initial?.credit_total_remaining?.toString() ?? '',
   )
+  const [amount, setAmount] = useState(initialAmount?.toString() ?? '')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -76,14 +105,15 @@ export function CategoryForm({
     event.preventDefault()
     setError(null)
 
-    if (!name.trim()) {
-      setError('Le nom est obligatoire.')
+    if (!label.trim()) {
+      setError('Le libellé est obligatoire.')
       return
     }
 
-    const input: CategoryFormInput = {
-      name,
-      type,
+    const input: ExpenseFormInput = {
+      label,
+      description: null,
+      category,
       color,
       share_mode: shareMode,
       is_credit: isCredit,
@@ -94,13 +124,23 @@ export function CategoryForm({
         : null,
     }
 
+    const planned = parseAmount(amount)
+
     startTransition(async () => {
-      const result = initial
-        ? await updateCategory(initial.id, input)
-        : await createCategory(input)
-      if (result.error) {
-        setError("Échec de l'enregistrement. Réessaie.")
-        return
+      if (initial) {
+        const result = await updateExpense(initial.id, input)
+        if (result.error) {
+          setError("Échec de l'enregistrement. Réessaie.")
+          return
+        }
+        // Le montant prévisionnel s'applique au mois courant uniquement.
+        await upsertBudget(month, initial.id, planned)
+      } else {
+        const result = await createExpense(input, month, planned)
+        if (result.error) {
+          setError("Échec de l'enregistrement. Réessaie.")
+          return
+        }
       }
       onDone()
     })
@@ -108,23 +148,23 @@ export function CategoryForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <Field label="Nom" htmlFor="cat-name">
+      <Field label="Libellé" htmlFor="exp-label">
         <Input
-          id="cat-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="ex : Alimentation, Logement, PEA"
+          id="exp-label"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="ex : Loyer, Courses, PEA"
           required
         />
       </Field>
 
-      <Field label="Type" htmlFor="cat-type">
+      <Field label="Catégorie" htmlFor="exp-category">
         <Select
-          id="cat-type"
-          value={type}
-          onChange={(e) => setType(e.target.value as CategoryType)}
+          id="exp-category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as CategoryType)}
         >
-          {CATEGORY_TYPE_OPTIONS.map((opt) => (
+          {categoryOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
@@ -136,9 +176,9 @@ export function CategoryForm({
         <ColorPicker value={color} onChange={setColor} />
       </Field>
 
-      <Field label="Mode de partage" htmlFor="cat-share">
+      <Field label="Mode de partage" htmlFor="exp-share">
         <Select
-          id="cat-share"
+          id="exp-share"
           value={shareMode}
           onChange={(e) => setShareMode(e.target.value as ShareMode)}
         >
@@ -158,32 +198,32 @@ export function CategoryForm({
           onChange={(e) => setIsCredit(e.target.checked)}
           className="h-5 w-5 rounded accent-ink"
         />
-        <span className="text-sm text-ink">Catégorie à crédit</span>
+        <span className="text-sm text-ink">Dépense à crédit</span>
       </label>
 
       {/* Champs crédit conditionnels */}
       {isCredit && (
         <div className="flex flex-col gap-4 rounded-card border border-border bg-surface-2 p-4">
-          <Field label="Mensualités restantes" htmlFor="cat-months">
+          <Field label="Mensualités restantes" htmlFor="exp-months">
             <Input
-              id="cat-months"
+              id="exp-months"
               inputMode="numeric"
               value={months}
               onChange={(e) => setMonths(e.target.value)}
               placeholder="ex : 18"
             />
           </Field>
-          <Field label="Date de fin" htmlFor="cat-end">
+          <Field label="Date de fin" htmlFor="exp-end">
             <Input
-              id="cat-end"
+              id="exp-end"
               type="date"
               value={endDate ?? ''}
               onChange={(e) => setEndDate(e.target.value)}
             />
           </Field>
-          <Field label="Capital restant dû (€)" htmlFor="cat-total">
+          <Field label="Capital restant dû (€)" htmlFor="exp-total">
             <Input
-              id="cat-total"
+              id="exp-total"
               inputMode="decimal"
               value={totalRemaining}
               onChange={(e) => setTotalRemaining(e.target.value)}
@@ -193,6 +233,17 @@ export function CategoryForm({
           </Field>
         </div>
       )}
+
+      <Field label="Montant prévisionnel du mois (€)" htmlFor="exp-amount">
+        <Input
+          id="exp-amount"
+          inputMode="decimal"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="ex : 850"
+          className="tabular"
+        />
+      </Field>
 
       {error && (
         <p className="text-sm text-down" role="alert">
@@ -209,7 +260,7 @@ export function CategoryForm({
             ? 'Enregistrement…'
             : initial
               ? 'Enregistrer'
-              : 'Créer la catégorie'}
+              : 'Créer la dépense'}
         </Button>
       </div>
     </form>

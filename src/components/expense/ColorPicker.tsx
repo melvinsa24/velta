@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn'
 import { CATEGORY_COLORS } from '@/lib/categoryMeta'
 
 /*
- * Sélecteur de couleur de catégorie : palette de 12 pastilles prédéfinies
+ * Sélecteur de couleur de dépense : palette de 12 pastilles prédéfinies
  * (cf. categoryMeta). Pastilles carrées au rayon 10px, cible tactile 44px.
  * La pastille sélectionnée porte un anneau --ink et une coche.
  */

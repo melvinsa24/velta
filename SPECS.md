@@ -10,8 +10,8 @@
 
 Un dashboard financier qui me permet de :
 
-1. Définir un **budget prévisionnel mensuel** par catégorie
-2. Suivre mes **dépenses réelles** au fil du mois (saisie rapide depuis mobile)
+1. Définir un **budget prévisionnel mensuel** sous forme de **dépenses prévues** (Loyer, Courses, PEA, etc.)
+2. Suivre mes **transactions réelles** au fil du mois (saisie rapide depuis mobile), reliées à une dépense prévue ou non
 3. Visualiser le **ratio besoins / envies / épargne** vs un objectif fixé
 4. Calculer la **répartition équitable des charges** avec ma copine Flore (qui n'utilise pas l'outil)
 5. **Simuler** l'impact d'une dépense ponctuelle sur mon budget mensuel
@@ -24,8 +24,8 @@ Un dashboard financier qui me permet de :
 ## 2. Stack technique
 
 - **Framework** : Next.js (App Router) + TypeScript
-- **Style** : Tailwind CSS
-- **Base de données + Auth** : Supabase (plan gratuit)
+- **Style** : Tailwind CSS v4 (CSS-first, via `@theme` dans `globals.css`)
+- **Base de données + Auth** : Supabase (plan gratuit, région Europe)
 - **Hébergement** : Vercel (plan gratuit)
 - **Graphiques** : Recharts
 - **PWA** : configuration pour ajout à l'écran d'accueil iOS
@@ -48,29 +48,38 @@ Un dashboard financier qui me permet de :
 - **Une seule typo** : Helvetica.
 - **Un seul rayon** : 10px partout, sauf pilules/chips/jauges/avatar (ronds, `999px`).
 
-### Code couleur catégories
+### Code couleur dépenses
 
-Chaque catégorie créée par l'utilisateur a une couleur personnalisable (sélecteur avec palette de 12-16 couleurs prédéfinies harmonieuses avec la charte).
+Chaque dépense créée par l'utilisateur a une couleur personnalisable (sélecteur avec palette de 12 couleurs prédéfinies harmonieuses avec la charte, définies dans `categoryMeta.ts`).
 
 ---
 
-## 4. Structure de l'application
+## 4. Vocabulaire & hiérarchie
+
+Trois niveaux à bien distinguer :
+
+| Niveau | Nom | Valeurs | Origine |
+|---|---|---|---|
+| 1 | **Type** | Besoins · Envies · Épargne | Fixe, hardcodé |
+| 2 | **Catégorie** | Besoins fixes · Besoins variables · Envies vélo · Envies autres · Épargne | Fixe, hardcodé |
+| 3 | **Dépense** | Loyer, Courses, PEA, Resto, etc. | Créée par l'utilisateur |
+
+**Mapping catégorie → type :**
+- `besoins_fixes`, `besoins_variables` → Besoins
+- `envies_velo`, `envies_autres` → Envies
+- `epargne` → Épargne
+
+> Une **dépense** appartient à une **catégorie**, qui appartient à un **type**. Les types et catégories ne sont jamais créés à la main par l'utilisateur — ils sont prédéfinis et fixes.
+
+---
+
+## 5. Structure de l'application
 
 ### Navigation
 
 **Tab bar basse** (mobile), comportant 4 onglets + un bouton **+** central pour la saisie rapide d'une transaction. Détails visuels (verre dépoli, point lime sur l'onglet actif) dans `VELTA_DESIGN_SYSTEM.md`.
 
-Les 4 onglets principaux à définir au design, sachant qu'il faut couvrir au total 7 écrans :
-
-1. Dashboard du mois en cours
-2. Budget prévisionnel
-3. Liste des transactions
-4. Répartition Flore
-5. Simulateur
-6. Récap annuel
-7. Réglages (catégories, objectif %, export, compte)
-
-**Structure validée de la tab bar :**
+**Structure de la tab bar :**
 
 | Position | Écran | Icône Lucide |
 |---|---|---|
@@ -80,7 +89,7 @@ Les 4 onglets principaux à définir au design, sachant qu'il faut couvrir au to
 | 4 | Flore | `Users` |
 | 5 | Réglages | `Settings` |
 
-Les écrans Transactions, Simulateur et Récap annuel sont accessibles depuis les onglets principaux (Transactions depuis Dashboard, Simulateur depuis Budget, Récap annuel depuis Dashboard ou Réglages).
+**Écrans secondaires** (accessibles depuis les onglets principaux) : Transactions (depuis Dashboard), Simulateur (depuis Budget), Récap annuel (depuis Dashboard ou Réglages).
 
 **Bibliothèque d'icônes : Lucide React** (`lucide-react`). Aucune autre bibliothèque d'icônes ne doit être utilisée.
 
@@ -91,46 +100,54 @@ Les écrans Transactions, Simulateur et Récap annuel sont accessibles depuis le
 
 ---
 
-## 5. Modèle de données
+## 6. Modèle de données
 
-### Table `categories`
+### Table `expenses` — Définitions de dépenses (persistantes)
+
+Une dépense est une définition durable (Loyer, Courses, PEA). Elle existe indépendamment des mois ; le montant prévisionnel mensuel est dans `monthly_budgets`.
+
 - `id` (uuid)
-- `name` (text) — ex: "Besoins fixes", "Vélo", "PEA"
-- `type` (enum: `besoins_fixes`, `besoins_variables`, `envies_velo`, `envies_autres`, `epargne`)
-- `parent_type` (enum calculé : `besoin` / `envie` / `epargne`)
+- `label` (text) — ex: "Loyer", "Courses", "PEA"
+- `description` (text, nullable) — description longue optionnelle
+- `category` (enum: `besoins_fixes`, `besoins_variables`, `envies_velo`, `envies_autres`, `epargne`)
 - `color` (text, code hex)
 - `share_mode` (enum: `perso_100`, `split_50_50`, `split_prorata`) — défaut: `perso_100`
 - `is_credit` (boolean) — si true, expose les champs ci-dessous
 - `credit_remaining_months` (int, nullable)
 - `credit_end_date` (date, nullable)
 - `credit_total_remaining` (numeric, nullable)
+- `archived` (boolean, défaut false) — une dépense supprimée est archivée, pas effacée (pour préserver l'historique des transactions)
 - `created_at`, `updated_at`
 
-> Hiérarchie : `parent_type` (besoins / envies / épargne) > `type` (sous-niveau imposé) > `category` (libellés libres créés par l'utilisateur). Les **libellés de transactions** (ex: "coiffeur", "courses Leclerc") sont stockés dans le champ `description` des transactions, pas comme catégorie.
+> Le `parent_type` (Besoins / Envies / Épargne) est dérivé de `category`, pas stocké.
 
-### Table `monthly_budgets`
+### Table `monthly_budgets` — Montants prévisionnels par mois
+
 - `id` (uuid)
 - `month` (date, premier jour du mois)
-- `category_id` (uuid, foreign key)
-- `label` (text) — nom de la dépense, ex: "Courses", "Loyer", "Salle de sport"
+- `expense_id` (uuid, foreign key → `expenses`)
 - `planned_amount` (numeric)
-- `status` (enum: `in_progress`, `closed`)
-- `note` (text, nullable) — la note libre du mois est attachée au mois, pas à une catégorie
+- `status` (enum: `in_progress`, `closed`) — sur le mois, pas sur la ligne
 - `created_at`, `updated_at`
 
-> Une ligne = une dépense nommée. Plusieurs lignes peuvent partager la même `category_id`.
+> Une ligne par dépense par mois. Plusieurs dépenses de la même catégorie peuvent coexister (ex: Loyer + EDF dans Besoins fixes).
+> Contrainte unique : `(month, expense_id)`.
 
-### Table `transactions`
+### Table `transactions` — Dépenses réelles saisies via "+"
+
 - `id` (uuid)
 - `date` (date)
 - `amount` (numeric)
-- `category_id` (uuid, foreign key)
-- `monthly_budget_id` (uuid, nullable, FK → `monthly_budgets`) — optionnel, présent si la transaction est reliée à une dépense prévue
-- `description` (text) — ex: "coiffeur", "courses Leclerc"
+- `expense_id` (uuid, foreign key → `expenses`, nullable) — si la transaction est reliée à une dépense prévue
+- `category` (enum) — toujours rempli ; copié depuis `expenses.category` au moment de la création si `expense_id` est fourni, sinon choisi directement par l'utilisateur
+- `description` (text, nullable) — ex: "Intermarché courses", "Coiffeur"
 - `month` (date, premier jour du mois) — calculé pour faciliter les agrégations
 - `created_at`, `updated_at`
 
+> La duplication de `category` sur la transaction est volontaire : elle permet (1) les requêtes d'agrégat sans jointure, (2) un snapshot historique stable si la dépense parent est modifiée plus tard.
+
 ### Table `monthly_settings`
+
 - `month` (date, premier jour du mois, primary key)
 - `revenue_melvin` (numeric) — mes revenus du mois
 - `revenue_flore` (numeric) — revenus de Flore (pour calcul prorata). Si 0, toutes les charges partagées deviennent 100% à moi
@@ -138,9 +155,10 @@ Les écrans Transactions, Simulateur et Récap annuel sont accessibles depuis le
 - `target_needs_pct` (numeric) — ex: 50
 - `target_wants_pct` (numeric) — ex: 30
 - `target_savings_pct` (numeric) — ex: 20
-- `note` (text, nullable)
+- `note` (text, nullable) — la note libre du mois
 
 ### Table `flore_payments`
+
 - `id` (uuid)
 - `date` (date)
 - `amount` (numeric)
@@ -151,72 +169,99 @@ Les écrans Transactions, Simulateur et Récap annuel sont accessibles depuis le
 
 ---
 
-## 6. Fonctionnalités détaillées
+## 7. Fonctionnalités détaillées
 
-### 6.1 Dashboard du mois
+### 7.1 Dashboard du mois
 
 **Affichage en haut** :
 - Mois en cours (ex: "Mai 2026")
-- Bouton "Nouveau mois" (voir 6.2)
+- Bouton "Nouveau mois" (voir 7.2)
 - Bouton "Archiver ce mois"
 
 **Carte héro (Reste à dépenser)** — fond `--ink`, voir design system :
 - **Reste à dépenser réel** : `revenus du mois − Σ(transactions réelles)` → gros chiffre central tabulaire
-- **Reste à dépenser après charges fixes prévues** : `revenus − Σ(transactions) − Σ(budgets prévus non encore dépensés des besoins fixes)` (affichage secondaire)
+- **Reste à dépenser après charges fixes prévues** : `revenus − Σ(transactions) − Σ(planned_amount des dépenses de catégorie besoins_fixes non encore couvertes par une transaction)` (affichage secondaire)
 
 **Bloc ratios** :
-- **Ratio actuel besoins / envies / épargne** vs objectif → 3 jauges horizontales (jauge lime sur piste `--surface-2`) avec code couleur sémantique (vert `--up` si dans la cible ±5%, orange en vigilance 5-15%, rouge `--down` >15%)
+- **Ratio actuel besoins / envies / épargne** vs objectif → 3 jauges horizontales (jauge lime sur piste `--surface-2`) avec code couleur sémantique : vert `--up` si dans la cible ±5%, ambre `--warn` en vigilance 5-15%, rouge `--down` >15%.
 
-**Bloc catégories** :
-- Liste des catégories actives ce mois sur cartes `--surface`
-- Pour chaque ligne : icône carrée (10px) à la couleur de la catégorie, nom, budget prévu, dépensé réel, mini-jauge `--ink`
+**Bloc dépenses** :
+- Liste des dépenses du mois (toutes les `monthly_budgets` du mois en cours) sur cartes `--surface`
+- Pour chaque ligne : icône carrée (10px) à la couleur de la dépense, libellé, montant prévu, dépensé réel (= somme des transactions reliées à cette dépense), mini-jauge `--ink`
 - Si dépassement → bordure rouge `--down` + petit message d'alerte ("⚠ Tu as dépassé ton budget courses de 23€")
+- En dessous, un bloc "Dépenses imprévues" liste les transactions du mois sans `expense_id`, regroupées par catégorie
 
 **Notifications visuelles (in-app uniquement)** :
-- Approche du plafond (>80% utilisé) → couleur orange
+- Approche du plafond (>80% utilisé) → couleur ambre `--warn`
 - Dépassement → couleur rouge `--down` + message
 - Aucune notif push ni mail
 
-**Note du mois** : champ texte libre en bas du dashboard, sauvegarde auto.
+**Note du mois** : champ texte libre en bas du dashboard, sauvegarde auto dans `monthly_settings.note`.
 
-### 6.2 Workflow "Nouveau mois"
+### 7.2 Workflow "Nouveau mois"
 
 Quand je clique sur "Nouveau mois" :
 
 1. L'outil **sauvegarde** le mois en cours (status `closed`) mais le rend accessible (je peux le rouvrir si erreur)
 2. Crée un nouveau mois `in_progress`
-3. **Reprend les catégories de type `besoins_fixes` et `besoins_variables`** avec leurs montants prévisionnels du mois précédent
-4. **Conserve les libellés** des catégories envies/épargne mais remet leurs montants à 0
-5. Réel à zéro pour toutes
-6. Pour les **catégories type crédit** : décrémente `credit_remaining_months` ; si 0 → la catégorie disparaît automatiquement du nouveau mois (mais reste dans les paramètres pour historique)
+3. Pour chaque `expense` non archivée :
+   - Si `category` ∈ {`besoins_fixes`, `besoins_variables`} → crée une ligne `monthly_budgets` avec `planned_amount` = montant du mois précédent (ou 0 si pas de ligne précédente)
+   - Si `category` ∈ {`envies_velo`, `envies_autres`, `epargne`} → crée une ligne `monthly_budgets` avec `planned_amount` = 0 (libellé conservé, montant à saisir)
+   - Si `is_credit = true` → décrémente `credit_remaining_months` de 1 ; si arrive à 0 → `archived = true` (la dépense disparaît automatiquement du mois suivant mais reste visible en historique)
 
 **Erreur de manip** : un bouton "Rouvrir ce mois" permet de remettre un mois fermé en statut `in_progress`.
 
-### 6.3 Budget prévisionnel
+### 7.3 Budget prévisionnel
 
-- Regroupé par `parent_type` (besoins / envies / épargne), puis par catégorie au sein de chaque groupe
-- Sous chaque catégorie : la liste de ses **dépenses nommées** (une ligne = une dépense). Plusieurs dépenses peuvent partager la même catégorie.
-- Pour chaque dépense : son **label** (éditable inline), son montant prévu (éditable inline), bouton suppression
-- Bouton "+ Ajouter une dépense" sous chaque catégorie : crée une nouvelle dépense (label vide à remplir)
-- Bouton "+ Nouvelle catégorie" en bas de chaque section : crée une catégorie à la volée
-- En haut : suggestion d'auto-remplissage "Reprendre les dépenses du mois précédent" (recopie label + montant + catégorie de N-1)
-- En bas : récap des 3 totaux (besoins / envies / épargne) avec les % vs objectif
+**Affichage** :
+- 3 sections verticales : **Besoins**, **Envies**, **Épargne**
+- Dans chaque section, les dépenses sont **regroupées par catégorie** :
+  - Besoins → sous-groupes Besoins fixes / Besoins variables
+  - Envies → sous-groupes Envies vélo / Envies autres
+  - Épargne → pas de sous-groupe, simple liste
+- Pour chaque dépense : pastille couleur, libellé, montant prévu (éditable inline)
+- Bouton "**+ Ajouter une dépense**" en bas de chaque section parent_type (Besoins / Envies / Épargne)
 
-### 6.4 Saisie d'une transaction
+**Modale "Nouvelle dépense"** :
+- Libellé (texte court)
+- Catégorie (sélecteur parmi les 5 valeurs ; pré-filtré sur le parent_type de la section depuis laquelle on clique)
+- Couleur (palette de 12)
+- Mode de partage (`perso_100` / `split_50_50` / `split_prorata`)
+- À crédit (checkbox) ; si activé : 3 champs (mensualités restantes, date de fin, capital restant)
+- Montant prévisionnel pour le mois en cours
 
-**Écran rapide** (accessible via bouton **+** central de la tab bar) :
+Au submit : création d'une ligne dans `expenses` + une ligne dans `monthly_budgets` pour le mois en cours.
+
+**Édition d'une dépense** :
+- Tap sur la dépense → modale d'édition (mêmes champs)
+- Modifier le **montant** → met à jour `monthly_budgets.planned_amount` pour le mois en cours uniquement
+- Modifier **libellé / couleur / share_mode / is_credit / etc.** → met à jour `expenses` (s'applique aux mois passés et futurs ; les transactions historiques conservent leur snapshot de catégorie)
+- Bouton "Supprimer" → archive l'expense (`archived = true`). Les transactions passées la conservent en référence ; elle disparaît des mois suivants.
+
+**Récap en bas de page** :
+- 3 totaux (Besoins / Envies / Épargne) avec % calculé sur `revenue_melvin`
+- Comparaison à l'objectif % (vert `--up` ±5%, ambre `--warn` 5-15%, rouge `--down` >15%)
+- Total global prévu
+
+### 7.4 Saisie d'une transaction
+
+**Modale accessible via bouton "+" central de la tab bar, depuis n'importe quel écran** :
 - **Date** : pré-remplie à aujourd'hui, modifiable
 - **Montant** (€)
-- **Catégorie** : sélecteur cascade (parent_type → catégorie). Si la catégorie n'existe pas, bouton "Créer une nouvelle catégorie" qui ouvre une modale rapide.
-- **Description** : champ texte libre (ex: "coiffeur")
+- **Rattachement** (choix obligatoire) :
+  - **Option A — Relier à une dépense prévue** : sélecteur des dépenses du mois en cours (regroupées par catégorie). La catégorie est déduite automatiquement.
+  - **Option B — Saisie libre** : pas de rattachement à une dépense prévue. L'utilisateur choisit alors une catégorie directement (sélecteur des 5 valeurs).
+- **Description** : champ texte libre (ex: "Intermarché courses", "Coiffeur")
 - **Bouton "Enregistrer"** (CTA accent lime)
+
+Au submit : insertion dans `transactions` avec ou sans `expense_id`. `category` est toujours rempli (copié depuis l'expense en option A, choisi par l'utilisateur en option B).
 
 **Vue liste des transactions** :
 - Liste chronologique inversée du mois en cours
-- Filtres : par catégorie, par parent_type
-- Édition / suppression possible (icônes sur chaque ligne)
+- Filtres : par catégorie, par dépense prévue (montre les transactions liées), "Imprévues uniquement"
+- Édition / suppression possible
 
-### 6.5 Répartition Flore
+### 7.5 Répartition Flore
 
 **Inputs** (en haut de l'écran) :
 - Mes revenus du mois : préremplis depuis `monthly_settings.revenue_melvin`
@@ -226,7 +271,7 @@ Quand je clique sur "Nouveau mois" :
 
 **Affichage** :
 - Ratio de répartition (ex: 73,6% / 26,4%)
-- Liste des catégories marquées `split_50_50` ou `split_prorata` avec calcul auto :
+- Liste des **dépenses** dont `share_mode` est `split_50_50` ou `split_prorata`, avec calcul auto :
   - Loyer (prorata) : ma part X€, part de Flore Y€
   - Énergie (50/50) : ma part X€, part de Flore X€
 - APL (prorata, à reverser à Flore)
@@ -243,12 +288,12 @@ Quand je clique sur "Nouveau mois" :
 - Le montant total apparaît uniquement dans le module Flore pour le calcul
 - Si revenu Flore = 0, le montant affiché redevient le total (101€)
 
-### 6.6 Simulateur (MVP : court terme uniquement)
+### 7.6 Simulateur (MVP : court terme uniquement)
 
 **Écran** :
 - Champ "Ajouter une dépense fictive"
   - Montant
-  - Catégorie cible
+  - Rattachement (dépense prévue ou catégorie directe, comme la saisie d'une transaction)
 - Affichage temps réel de l'impact :
   - Nouveau "reste à dépenser"
   - Nouveau ratio besoins/envies/épargne vs objectif
@@ -258,32 +303,31 @@ Quand je clique sur "Nouveau mois" :
 
 > Le simulateur ne modifie jamais la base de données tant que je ne convertis pas.
 
-**À noter pour la v2** : simulation long terme (projection sur 12 mois) + simulation de changement de répartition (passer de 50/30/20 à 60/30/10).
-
-### 6.7 Récap annuel
+### 7.7 Récap annuel
 
 **Affichage** :
-1. **Graphiques** (priorité) — palette restreinte au design system (`--ink`, `--accent`, `--up`, `--down`, `--ink-2` pour les séries secondaires) :
+1. **Graphiques** — palette restreinte au design system (`--ink`, `--accent`, `--up`, `--down`, `--ink-2`) :
    - Courbe d'évolution mensuelle de mes revenus
    - Courbe d'évolution besoins / envies / épargne (3 séries)
    - Barres empilées : répartition mensuelle besoins/envies/épargne
-   - Donut annuel : part de chaque parent_type sur l'année
-2. **Tableau** (en dessous, plus simple que dans le fichier Excel actuel) :
-   - Lignes : besoins / envies / épargne (juste les 3 totaux, pas le détail par sous-catégorie)
+   - Donut annuel : part de chaque type sur l'année
+2. **Tableau** :
+   - Lignes : Besoins / Envies / Épargne (juste les 3 totaux)
    - Colonnes : 12 mois + moyenne + total annuel
 
 Les mois non remplis affichent un tiret, pas un `#DIV/0!`.
 
-### 6.8 Réglages
+### 7.8 Réglages
 
-- **Catégories** : CRUD complet, avec couleur, mode de partage, flag crédit
+> La gestion des dépenses se fait depuis l'écran Budget, pas depuis Réglages.
+
 - **Objectif %** : 3 champs (besoins / envies / épargne). Quand 2 sont remplis, le 3e se complète automatiquement à `100 − somme des deux autres`. Total doit faire 100%.
-- **Export** : bouton "Exporter en CSV" qui télécharge un fichier avec toutes les transactions + tous les budgets mensuels
+- **Export** : bouton "Exporter en CSV" qui télécharge un fichier avec toutes les transactions + tous les budgets mensuels + toutes les dépenses
 - **Compte** : changer mot de passe, déconnexion
 
 ---
 
-## 7. Authentification
+## 8. Authentification
 
 - Compte unique (le mien)
 - Login email + mot de passe via Supabase Auth
@@ -292,37 +336,40 @@ Les mois non remplis affichent un tiret, pas un `#DIV/0!`.
 
 ---
 
-## 8. Comportements spéciaux à respecter
+## 9. Comportements spéciaux à respecter
 
 1. **Aucune valeur calculée n'est stockée** : tous les ratios, restes, totaux sont calculés à la volée depuis les données brutes. Évite la désynchronisation.
 2. **Les remboursements Flore ne touchent jamais aux ratios besoins/envies/épargne**. Module isolé.
 3. **Si revenu Flore = 0** sur un mois, basculer tout en 100% perso, afficher message informatif.
 4. **Les transactions du mois en cours sont saisissables même si je suis sur un écran d'archive** : on est toujours implicitement sur "le mois en cours" pour la saisie, sauf si je sélectionne explicitement un autre mois dans le sélecteur.
-5. **Les charges programmées non saisies n'apparaissent PAS dans le "reste à dépenser réel"**. Mais elles apparaissent en colonne "objectif" qui me sert de référence visuelle.
+5. **Les charges programmées non saisies n'apparaissent PAS dans le "reste à dépenser réel"**. Mais elles apparaissent en colonne "objectif" qui sert de référence visuelle.
+6. **Modifier une dépense ne casse pas l'historique** : les transactions passées conservent leur snapshot `category` et leur `expense_id`. Si l'expense est renommée ("Courses" → "Alimentation"), les transactions liées suivent le nouveau nom (via la FK) ; si la catégorie de l'expense est changée, les transactions passées conservent l'ancienne catégorie (champ `category` figé à la création).
+7. **Supprimer une dépense = archiver** (`archived = true`). Les transactions passées restent. L'expense disparaît des mois futurs et des sélecteurs.
 
 ---
 
-## 9. Étapes de développement recommandées
+## 10. Étapes de développement recommandées
 
 (Voir `ROADMAP.md` pour le détail)
 
-1. Setup projet + Supabase + auth
-2. Modèle de données + migrations
-3. CRUD catégories + paramètres
-4. Saisie budget prévisionnel
-5. Saisie transactions + liste
-6. Dashboard mensuel (sans graphiques)
-7. Workflow nouveau mois / archivage
-8. Module répartition Flore
-9. Simulateur
-10. Récap annuel + graphiques
-11. Export CSV
-12. PWA + ajout écran accueil iOS
-13. Polish UI + animations
+1. Setup projet + Supabase + auth ✅
+2. Modèle de données + migrations ✅ → **refonte en cours suite au pivot Dépenses**
+3. Charte graphique + navigation ✅
+4. Réglages (objectifs %) — la partie catégories est obsolète
+5. Budget prévisionnel — refonte pour utiliser le nouveau modèle Dépenses
+6. Saisie transactions + liste
+7. Dashboard mensuel
+8. Workflow nouveau mois / archivage
+9. Module répartition Flore
+10. Simulateur
+11. Récap annuel + graphiques
+12. Export CSV
+13. PWA + ajout écran accueil iOS
+14. Polish UI + animations
 
 ---
 
-## 10. Hors périmètre v1 (à garder en tête pour v2+)
+## 11. Hors périmètre v1 (à garder en tête pour v2+)
 
 - Pot commun "provisions" (sinking funds pour cadeaux Noël, contrôle technique, etc.)
 - Objectifs d'épargne nommés avec suivi cumulé (fonds urgence X€, voyage Y€)
@@ -331,14 +378,14 @@ Les mois non remplis affichent un tiret, pas un `#DIV/0!`.
 - Mode sombre
 - Notifications push / mail
 - Multi-utilisateur (si Flore change d'avis)
-- Catégorie "compte commun courses" plus fine
 - Stats avancées (top dépenses, tendances par catégorie)
 
 ---
 
-## 11. Notes pour Claude Code
+## 12. Notes pour Claude Code
 
 - **Charte graphique** : la source unique est `VELTA_DESIGN_SYSTEM.md`. Lire ce fichier avant tout travail UI. Ne jamais inventer une couleur, une taille, un rayon ou une typo qui n'y figure pas.
+- **Vocabulaire** : `Type` (Besoins/Envies/Épargne, fixe) > `Catégorie` (5 valeurs fixes) > `Dépense` (créée par l'utilisateur). Ne jamais confondre.
 - Code propre, fonctions courtes, composants réutilisables.
 - Commentaires en français pour les parties métier.
 - Toutes les sommes en `numeric` côté base, jamais en `float`.

@@ -3,47 +3,33 @@ import { Button, Card } from '@/components/ui'
 import { LogoutButton } from '@/app/logout-button'
 import { createClient } from '@/lib/supabase/server'
 import { currentMonthStart, formatMonthLabel } from '@/lib/month'
-import { CategoriesSection } from './CategoriesSection'
 import { TargetsSection } from './TargetsSection'
-import type { Category, MonthlySettings, Transaction } from '@/types/database'
+import type { MonthlySettings } from '@/types/database'
 
 /*
- * Écran Réglages (Phase 5). Server Component : charge les catégories, le nombre
- * de transactions par catégorie (pour l'avertissement de suppression) et les
- * réglages du mois en cours. 4 sections en scroll vertical :
- * Catégories · Objectifs % · Export CSV (placeholder) · Compte.
+ * Écran Réglages. Server Component : charge les réglages du mois en cours.
+ * 3 sections en scroll vertical : Objectifs % · Export CSV (placeholder) · Compte.
+ *
+ * La gestion des dépenses se fait depuis l'écran Budget (SPECS §7.8) : la
+ * section « Catégories » a été retirée au pivot modèle Dépenses (Phase 5bis).
  */
 export default async function ReglagesPage() {
   const supabase = await createClient()
   const month = currentMonthStart()
 
-  const [categoriesRes, txRes, settingsRes] = await Promise.all([
-    supabase.from('categories').select('*').order('created_at'),
-    supabase.from('transactions').select('category_id'),
-    supabase
-      .from('monthly_settings')
-      .select('*')
-      .eq('month', month)
-      .maybeSingle(),
-  ])
+  const settingsRes = await supabase
+    .from('monthly_settings')
+    .select('*')
+    .eq('month', month)
+    .maybeSingle()
 
-  const categories = (categoriesRes.data as Category[] | null) ?? []
   const settings = (settingsRes.data as MonthlySettings | null) ?? null
-
-  // Compte des transactions par catégorie.
-  const txCounts: Record<string, number> = {}
-  const txRows = (txRes.data as Pick<Transaction, 'category_id'>[] | null) ?? []
-  for (const row of txRows) {
-    txCounts[row.category_id] = (txCounts[row.category_id] ?? 0) + 1
-  }
 
   return (
     <>
-      <ScreenHeader title="Réglages" subtitle="Catégories, objectif, compte" />
+      <ScreenHeader title="Réglages" subtitle="Objectif, export, compte" />
 
       <div className="flex flex-col gap-8">
-        <CategoriesSection categories={categories} txCounts={txCounts} />
-
         <TargetsSection
           monthIso={month}
           monthLabel={formatMonthLabel(month)}

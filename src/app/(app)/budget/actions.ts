@@ -8,10 +8,10 @@ import type { MonthlyBudget } from '@/types/database'
 /*
  * Server Actions de l'écran Budget prévisionnel.
  *
- * Depuis la migration 002, `monthly_budgets` stocke une ligne par DÉPENSE
- * NOMMÉE (label + montant), rattachée à une catégorie. Plusieurs lignes peuvent
- * partager la même category_id sur un même mois : il n'y a plus de contrainte
- * d'unicité, les lignes sont créées / éditées / supprimées par leur `id`.
+ * Depuis la migration 003 (pivot « Dépenses »), `monthly_budgets` stocke le
+ * montant prévisionnel d'une DÉPENSE (`expense_id`) pour un mois, avec une
+ * contrainte unique (month, expense_id). Le label / la couleur / la catégorie
+ * vivent sur la dépense (table `expenses`), plus ici.
  */
 
 type ActionResult = { error: string | null }
@@ -19,10 +19,10 @@ type ActionResult = { error: string | null }
 /** Forme d'une ligne renvoyée au client (sous-ensemble de MonthlyBudget). */
 export type BudgetLine = Pick<
   MonthlyBudget,
-  'id' | 'category_id' | 'label' | 'planned_amount'
+  'id' | 'expense_id' | 'planned_amount'
 >
 
-const LINE_COLUMNS = 'id, category_id, label, planned_amount'
+const LINE_COLUMNS = 'id, expense_id, planned_amount'
 
 async function requireClient() {
   const supabase = await createClient()
@@ -34,58 +34,31 @@ async function requireClient() {
 }
 
 /*
- * Crée une nouvelle dépense nommée (label vide à remplir) pour une catégorie et
- * un mois. Renvoie la ligne créée (avec son id) pour que le client l'ajoute sans
- * refetch complet.
+ * Définit / met à jour le montant prévisionnel d'une dépense pour un mois.
+ * Upsert sur la contrainte unique (month, expense_id) : crée la ligne si elle
+ * n'existe pas, met à jour `planned_amount` sinon. Pas de revalidatePath : la
+ * saisie est optimiste côté client (debounce / blur).
  */
-export async function createBudgetLine(
+export async function upsertBudget(
   month: string,
-  categoryId: string,
-): Promise<ActionResult & { line: BudgetLine | null }> {
-  const supabase = await requireClient()
-  const { data, error } = await supabase
-    .from('monthly_budgets')
-    .insert({ month, category_id: categoryId, label: '', planned_amount: 0 })
-    .select(LINE_COLUMNS)
-    .single()
-  if (error) return { error: error.message, line: null }
-  return { error: null, line: data as BudgetLine }
-}
-
-/*
- * Met à jour le label et/ou le montant d'une ligne (par id). Pas de
- * revalidatePath : la saisie est optimiste côté client (debounce / blur).
- */
-export async function updateBudgetLine(
-  id: string,
-  patch: { label?: string; planned_amount?: number },
+  expenseId: string,
+  plannedAmount: number,
 ): Promise<ActionResult> {
   const supabase = await requireClient()
   const { error } = await supabase
     .from('monthly_budgets')
-    .update(patch)
-    .eq('id', id)
+    .upsert(
+      { month, expense_id: expenseId, planned_amount: plannedAmount },
+      { onConflict: 'month,expense_id' },
+    )
   if (error) return { error: error.message }
   return { error: null }
 }
 
 /*
- * Supprime une dépense prévue (par id). Les transactions éventuellement reliées
- * conservent leur ligne (FK on delete set null), elles perdent juste le
- * rattachement à la prévision.
- */
-export async function deleteBudgetLine(id: string): Promise<ActionResult> {
-  const supabase = await requireClient()
-  const { error } = await supabase.from('monthly_budgets').delete().eq('id', id)
-  if (error) return { error: error.message }
-  return { error: null }
-}
-
-/*
- * « Reprendre le mois précédent » : recopie toutes les dépenses de N-1 (label +
- * montant + catégorie) vers le mois courant. Réservé au cas où le mois courant
- * est encore vide (cf. gating `canCopyPrevious` côté page) — pas de dédoublonnage
- * possible sans contrainte d'unicité. Renvoie les lignes créées.
+ * « Reprendre le mois précédent » : recopie les prévisions de N-1 (expense_id +
+ * montant) vers le mois courant. Upsert avec ignoreDuplicates : les dépenses
+ * déjà prévues ce mois-ci ne sont pas écrasées. Renvoie les lignes du mois.
  */
 export async function copyPreviousMonth(
   month: string,
@@ -95,34 +68,38 @@ export async function copyPreviousMonth(
 
   const { data, error: readError } = await supabase
     .from('monthly_budgets')
-    .select('category_id, label, planned_amount')
+    .select('expense_id, planned_amount')
     .eq('month', prev)
     .order('created_at')
 
   if (readError) return { error: readError.message, lines: [] }
 
   const prevRows =
-    (data as Pick<
-      MonthlyBudget,
-      'category_id' | 'label' | 'planned_amount'
-    >[] | null) ?? []
+    (data as Pick<MonthlyBudget, 'expense_id' | 'planned_amount'>[] | null) ?? []
 
   if (prevRows.length === 0) return { error: null, lines: [] }
 
   const rows = prevRows.map((r) => ({
     month,
-    category_id: r.category_id,
-    label: r.label,
+    expense_id: r.expense_id,
     planned_amount: r.planned_amount,
   }))
 
-  const { data: inserted, error: writeError } = await supabase
+  const { error: writeError } = await supabase
     .from('monthly_budgets')
-    .insert(rows)
-    .select(LINE_COLUMNS)
+    .upsert(rows, { onConflict: 'month,expense_id', ignoreDuplicates: true })
 
   if (writeError) return { error: writeError.message, lines: [] }
 
+  // Relit l'état du mois courant après reprise (lignes existantes + insérées).
+  const { data: current, error: refetchError } = await supabase
+    .from('monthly_budgets')
+    .select(LINE_COLUMNS)
+    .eq('month', month)
+    .order('created_at')
+
+  if (refetchError) return { error: refetchError.message, lines: [] }
+
   revalidatePath('/budget')
-  return { error: null, lines: (inserted as BudgetLine[] | null) ?? [] }
+  return { error: null, lines: (current as BudgetLine[] | null) ?? [] }
 }

@@ -6,7 +6,7 @@ import { currentMonthStart } from '@/lib/month'
 
 /*
  * Server Action propre à l'écran Réglages : enregistrement des objectifs %.
- * Le CRUD catégorie partagé vit dans `@/lib/actions/categories`.
+ * Le CRUD des dépenses vit dans `@/lib/actions/expenses` (écran Budget).
  */
 
 type ActionResult = { error: string | null }
