@@ -64,6 +64,16 @@ export const SHARE_MODE_OPTIONS = (
   Object.keys(SHARE_MODE_LABELS) as ShareMode[]
 ).map((value) => ({ value, label: SHARE_MODE_LABELS[value] }))
 
+/**
+ * Catégories de chaque Type, dans l'ordre d'affichage du budget (SPECS §7.3).
+ * L'Épargne n'a qu'une catégorie → pas de sous-groupe à l'écran.
+ */
+export const CATEGORIES_BY_PARENT: Record<ParentType, CategoryType[]> = {
+  besoin: ['besoins_fixes', 'besoins_variables'],
+  envie: ['envies_velo', 'envies_autres'],
+  epargne: ['epargne'],
+}
+
 /** Ordre d'affichage des groupes parents. */
 export const PARENT_ORDER: ParentType[] = ['besoin', 'envie', 'epargne']
 

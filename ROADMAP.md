@@ -38,16 +38,16 @@
 - [x] CRUD catégories — **obsolète, à supprimer en Phase 5bis**
 - [x] Réglage de l'objectif %
 
-### Phase 5bis — Pivot modèle Dépenses 🔄
+### Phase 5bis — Pivot modèle Dépenses ✅
 > Suite à la clarification produit du 09/06/2026, le modèle de données change. Cf. SPECS §4–§6.
-> Découpée en 2 sessions : **session 1 = backend** (faite), **session 2 = refonte UI** (à venir).
-- [x] **(S1)** Migration SQL `003_expenses_pivot.sql` : table `expenses`, `monthly_budgets.expense_id` + unique (month, expense_id), `transactions.expense_id` + `category`, drop table `categories` ⚠ *à exécuter manuellement dans Supabase*
+> Réalisée en 2 sessions : **session 1 = backend**, **session 2 = refonte UI**.
+- [x] **(S1)** Migration SQL `003_expenses_pivot.sql` : table `expenses`, `monthly_budgets.expense_id` + unique (month, expense_id), `transactions.expense_id` + `category`, drop table `categories` (exécutée dans Supabase)
 - [x] **(S1)** Types (`expenses`, MonthlyBudget/Transaction repivotés) + `categoryMeta` (map `CATEGORY_PARENT`)
 - [x] **(S1)** Actions `expenses.ts` (create/update/archive) + `budget/actions.ts` repivoté (`upsertBudget`, `copyPreviousMonth` sur expense_id)
 - [x] **(S1)** Composant `ExpenseForm` (ex-CategoryForm) + `ColorPicker` déplacés dans `components/expense/`
-- [x] **(S1)** Stubs build-green : section Catégories retirée de Réglages ; écran Budget en placeholder (ancien `BudgetEditor.tsx.bak` conservé pour référence)
-- [ ] **(S2)** Refondre l'écran Budget : hiérarchie Type > Catégorie > Dépenses, modale "Nouvelle dépense" (câbler `ExpenseForm`), saisie inline du montant via `upsertBudget`
-- [ ] **(S2)** Câbler l'archivage de dépense + reprise mois précédent, supprimer `BudgetEditor.tsx.bak`
+- [x] **(S2)** Écran Réglages finalisé : Objectifs % + Export (placeholder) + Compte, sans section Catégories
+- [x] **(S2)** Écran Budget refondu : sections Type > regroupement par Catégorie (`CATEGORIES_BY_PARENT`), saisie inline du montant (debounce + flush) via `upsertBudget`, modale `ExpenseForm` création (pré-filtrée) / édition + montant du mois
+- [x] **(S2)** Archivage de dépense (confirmation inline dans `ExpenseForm`) + reprise N-1 ; récap totaux via `CATEGORY_PARENT` ; suppression de `BudgetEditor.tsx.bak`
 
 ### Phase 6 — Budget prévisionnel ✅ (à refondre en Phase 5bis)
 - [x] Écran budget prévisionnel
@@ -193,3 +193,4 @@ Je peux remplacer complètement mon Google Sheets actuel. Je saisis mes dépense
 | 2026-06-09 | Pré-Phase 7 | Migration 002 : ajout `monthly_budgets.label` + `transactions.monthly_budget_id`, drop unique constraint (`month`, `category_id`). Renommage UI : "Type" reste "Type", "Catégorie" reste, mapping Dépense = lignes du budget. |
 | 2026-06-09 | Phase 5bis | **Pivot modèle Dépenses** : refonte SPECS complète. Nouveau modèle Type > Catégorie (5 valeurs fixes) > Dépense (créée par l'utilisateur). Table `expenses` séparée, table `categories` supprimée. Couleur / share_mode / is_credit migrent sur la dépense. Réglages perd la section Catégories. |
 | 2026-06-09 | Phase 5bis · S1 | **Backend** : migration 003 (expenses + repivot monthly_budgets/transactions), types repivotés, `categoryMeta.CATEGORY_PARENT`, actions `expenses.ts` + `budget/actions.ts` (upsertBudget/copyPreviousMonth sur expense_id), `ExpenseForm`+`ColorPicker` dans `components/expense/`. Stubs build-green (Réglages sans Catégories, Budget placeholder). `BudgetEditor.tsx.bak` conservé. Migration non exécutée (à coller dans Supabase). UI Budget → session 2. |
+| 2026-06-09 | Phase 5bis · S2 | **Refonte UI** : migration 003 exécutée. Budget refondu (`BudgetEditor` v2 : sections Type > sous-groupes Catégorie via `CATEGORIES_BY_PARENT`, saisie inline du montant → `upsertBudget`, modale `ExpenseForm` création pré-filtrée / édition + montant du mois, archivage avec confirmation inline, reprise N-1, récap via `CATEGORY_PARENT`). Réglages finalisé (Objectifs % + Export + Compte). `BudgetEditor.tsx.bak` supprimé. Phase 5bis terminée. |

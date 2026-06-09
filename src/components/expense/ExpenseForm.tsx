@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { Trash2 } from 'lucide-react'
 import { Button, Input, Select } from '@/components/ui'
 import { ColorPicker } from './ColorPicker'
 import {
@@ -10,6 +11,7 @@ import {
   SHARE_MODE_OPTIONS,
 } from '@/lib/categoryMeta'
 import {
+  archiveExpense,
   createExpense,
   updateExpense,
   type ExpenseFormInput,
@@ -60,6 +62,9 @@ function parseAmount(value: string): number {
  * Au submit :
  *   - création → `expenses` + ligne `monthly_budgets` du mois courant ;
  *   - édition  → met à jour `expenses` et le montant prévisionnel du mois courant.
+ *
+ * En édition, si `onArchived` est fourni, un bouton « Supprimer » (avec
+ * confirmation inline) archive la dépense (SPECS §9.7 : suppression = archivage).
  */
 export function ExpenseForm({
   initial,
@@ -67,12 +72,14 @@ export function ExpenseForm({
   month,
   initialAmount,
   onDone,
+  onArchived,
 }: {
   initial: Expense | null
   parentType?: ParentType
   month: string
   initialAmount?: number
   onDone: () => void
+  onArchived?: () => void
 }) {
   // Catégories proposées : filtrées sur le parent_type si fourni.
   const categoryOptions = parentType
@@ -100,6 +107,22 @@ export function ExpenseForm({
   const [amount, setAmount] = useState(initialAmount?.toString() ?? '')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  // Confirmation de suppression (archivage) en deux temps, sans modale empilée.
+  const [confirmingArchive, setConfirmingArchive] = useState(false)
+  const [archivePending, startArchive] = useTransition()
+
+  function handleArchive() {
+    if (!initial || !onArchived) return
+    setError(null)
+    startArchive(async () => {
+      const result = await archiveExpense(initial.id)
+      if (result.error) {
+        setError('Échec de la suppression. Réessaie.')
+        return
+      }
+      onArchived()
+    })
+  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -263,6 +286,48 @@ export function ExpenseForm({
               : 'Créer la dépense'}
         </Button>
       </div>
+
+      {/* Suppression (= archivage) — uniquement en édition. */}
+      {initial && onArchived && (
+        <div className="mt-1 border-t border-border pt-4">
+          {confirmingArchive ? (
+            <div className="flex flex-col gap-3 rounded-card border border-down/30 bg-down/5 p-3">
+              <p className="text-sm text-ink-2">
+                Supprimer «&nbsp;
+                <span className="font-medium text-ink">{initial.label}</span>
+                &nbsp;» ? Elle disparaît des mois suivants ; les transactions
+                passées la conservent.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setConfirmingArchive(false)}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleArchive}
+                  disabled={archivePending}
+                  className="flex-1 bg-down text-white hover:shadow-card-hover active:bg-down"
+                >
+                  {archivePending ? 'Suppression…' : 'Supprimer'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingArchive(true)}
+              className="flex min-h-11 w-full items-center justify-center gap-2 text-sm text-ink-2 transition-colors hover:text-down"
+            >
+              <Trash2 size={16} aria-hidden="true" />
+              Supprimer cette dépense
+            </button>
+          )}
+        </div>
+      )}
     </form>
   )
 }
