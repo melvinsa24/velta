@@ -112,18 +112,20 @@ Les écrans Transactions, Simulateur et Récap annuel sont accessibles depuis le
 - `id` (uuid)
 - `month` (date, premier jour du mois)
 - `category_id` (uuid, foreign key)
+- `label` (text) — nom de la dépense, ex: "Courses", "Loyer", "Salle de sport"
 - `planned_amount` (numeric)
 - `status` (enum: `in_progress`, `closed`)
 - `note` (text, nullable) — la note libre du mois est attachée au mois, pas à une catégorie
 - `created_at`, `updated_at`
 
-> Une ligne par catégorie par mois.
+> Une ligne = une dépense nommée. Plusieurs lignes peuvent partager la même `category_id`.
 
 ### Table `transactions`
 - `id` (uuid)
 - `date` (date)
 - `amount` (numeric)
 - `category_id` (uuid, foreign key)
+- `monthly_budget_id` (uuid, nullable, FK → `monthly_budgets`) — optionnel, présent si la transaction est reliée à une dépense prévue
 - `description` (text) — ex: "coiffeur", "courses Leclerc"
 - `month` (date, premier jour du mois) — calculé pour faciliter les agrégations
 - `created_at`, `updated_at`
@@ -192,11 +194,12 @@ Quand je clique sur "Nouveau mois" :
 
 ### 6.3 Budget prévisionnel
 
-- Liste éditable de toutes les catégories du mois
-- Regroupées par `parent_type` (besoins / envies / épargne)
-- Pour chaque ligne : nom, montant prévu (éditable inline), bouton suppression
-- Bouton "+" en bas de chaque section pour créer une nouvelle catégorie à la volée
-- En haut : suggestion d'auto-remplissage "Reprendre les montants du mois précédent"
+- Regroupé par `parent_type` (besoins / envies / épargne), puis par catégorie au sein de chaque groupe
+- Sous chaque catégorie : la liste de ses **dépenses nommées** (une ligne = une dépense). Plusieurs dépenses peuvent partager la même catégorie.
+- Pour chaque dépense : son **label** (éditable inline), son montant prévu (éditable inline), bouton suppression
+- Bouton "+ Ajouter une dépense" sous chaque catégorie : crée une nouvelle dépense (label vide à remplir)
+- Bouton "+ Nouvelle catégorie" en bas de chaque section : crée une catégorie à la volée
+- En haut : suggestion d'auto-remplissage "Reprendre les dépenses du mois précédent" (recopie label + montant + catégorie de N-1)
 - En bas : récap des 3 totaux (besoins / envies / épargne) avec les % vs objectif
 
 ### 6.4 Saisie d'une transaction

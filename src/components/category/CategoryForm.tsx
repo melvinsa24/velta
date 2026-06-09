@@ -113,7 +113,7 @@ export function CategoryForm({
           id="cat-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="ex : Courses, Loyer, PEA"
+          placeholder="ex : Alimentation, Logement, PEA"
           required
         />
       </Field>

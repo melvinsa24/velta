@@ -6,30 +6,30 @@ import {
   previousMonthStart,
 } from '@/lib/month'
 import { BudgetEditor } from './BudgetEditor'
-import type { Category, MonthlyBudget, MonthlySettings } from '@/types/database'
+import type { BudgetLine } from './actions'
+import type { Category, MonthlySettings } from '@/types/database'
 
 /*
- * Écran Budget prévisionnel (Phase 6). Server Component : charge les catégories,
- * les montants prévus du mois courant et de N-1, et les réglages du mois
- * (revenu + objectifs %). Toute l'interaction (saisie inline, totaux, récap,
- * création de catégorie) est déléguée au client BudgetEditor.
+ * Écran Budget prévisionnel. Server Component : charge les catégories, les
+ * dépenses nommées du mois courant (label + montant) et les réglages du mois
+ * (revenu + objectifs %). Toute l'interaction (saisie inline du label et du
+ * montant, ajout/suppression de dépenses, totaux, récap, création de catégorie)
+ * est déléguée au client BudgetEditor.
  */
 export default async function BudgetPage() {
   const supabase = await createClient()
   const month = currentMonthStart()
   const prevMonth = previousMonthStart(month)
 
-  const [categoriesRes, budgetsRes, prevBudgetsRes, settingsRes] =
+  const [categoriesRes, linesRes, prevLinesRes, settingsRes] =
     await Promise.all([
       supabase.from('categories').select('*').order('created_at'),
       supabase
         .from('monthly_budgets')
-        .select('category_id, planned_amount')
-        .eq('month', month),
-      supabase
-        .from('monthly_budgets')
-        .select('category_id')
-        .eq('month', prevMonth),
+        .select('id, category_id, label, planned_amount')
+        .eq('month', month)
+        .order('created_at'),
+      supabase.from('monthly_budgets').select('id').eq('month', prevMonth),
       supabase
         .from('monthly_settings')
         .select('*')
@@ -39,22 +39,12 @@ export default async function BudgetPage() {
 
   const categories = (categoriesRes.data as Category[] | null) ?? []
   const settings = (settingsRes.data as MonthlySettings | null) ?? null
+  const lines = (linesRes.data as BudgetLine[] | null) ?? []
 
-  // Map { category_id: planned_amount } pour le mois courant.
-  const budgets: Record<string, number> = {}
-  const budgetRows =
-    (budgetsRes.data as Pick<
-      MonthlyBudget,
-      'category_id' | 'planned_amount'
-    >[] | null) ?? []
-  for (const row of budgetRows) budgets[row.category_id] = row.planned_amount
-
-  // « Reprendre N-1 » : proposé seulement si N-1 a des données ET qu'il reste
-  // des lignes vides ce mois (catégorie sans montant ou à 0).
-  const prevHasData = ((prevBudgetsRes.data as unknown[] | null) ?? []).length > 0
-  const hasEmptyLines = categories.some(
-    (c) => !(c.id in budgets) || budgets[c.id] === 0,
-  )
+  // « Reprendre N-1 » : proposé seulement si N-1 a des dépenses ET que le mois
+  // courant est encore vide (la copie n'a pas de dédoublonnage).
+  const prevHasData = ((prevLinesRes.data as unknown[] | null) ?? []).length > 0
+  const canCopyPrevious = prevHasData && lines.length === 0
 
   return (
     <>
@@ -65,14 +55,14 @@ export default async function BudgetPage() {
       <BudgetEditor
         month={month}
         categories={categories}
-        budgets={budgets}
+        lines={lines}
         revenue={settings?.revenue_melvin ?? 0}
         targets={{
           needs: settings?.target_needs_pct ?? 50,
           wants: settings?.target_wants_pct ?? 30,
           savings: settings?.target_savings_pct ?? 20,
         }}
-        canCopyPrevious={prevHasData && hasEmptyLines}
+        canCopyPrevious={canCopyPrevious}
       />
     </>
   )

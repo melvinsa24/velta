@@ -69,6 +69,8 @@ export interface MonthlyBudget {
   id: string
   month: string // date ISO, premier jour du mois
   category_id: string
+  /** Nom libre de la dépense prévue (ex: "Courses", "Loyer"). Une ligne = une dépense. */
+  label: string | null
   planned_amount: number
   status: BudgetStatus
   note: string | null
@@ -80,6 +82,7 @@ export interface MonthlyBudgetInsert {
   id?: string
   month: string
   category_id: string
+  label?: string | null
   planned_amount?: number
   status?: BudgetStatus
   note?: string | null
@@ -96,6 +99,8 @@ export interface Transaction {
   date: string // date ISO
   amount: number
   category_id: string
+  /** Rattachement optionnel à une dépense prévue (monthly_budgets). null si saisie libre. */
+  monthly_budget_id: string | null
   description: string | null
   month: string // date ISO, premier jour du mois
   created_at: string
@@ -107,6 +112,7 @@ export interface TransactionInsert {
   date: string
   amount: number
   category_id: string
+  monthly_budget_id?: string | null
   description?: string | null
   month: string
   created_at?: string

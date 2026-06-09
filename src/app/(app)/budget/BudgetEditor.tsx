@@ -2,12 +2,18 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, CopyPlus } from 'lucide-react'
+import { Plus, CopyPlus, Trash2 } from 'lucide-react'
 import { Button, Card, Modal } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { PARENT_ORDER, PARENT_LABELS } from '@/lib/categoryMeta'
 import { CategoryForm } from '@/components/category/CategoryForm'
-import { upsertBudget, copyPreviousMonth } from './actions'
+import {
+  createBudgetLine,
+  updateBudgetLine,
+  deleteBudgetLine,
+  copyPreviousMonth,
+  type BudgetLine,
+} from './actions'
 import type { Category, CategoryType, ParentType } from '@/types/database'
 
 type Targets = { needs: number; wants: number; savings: number }
@@ -15,11 +21,19 @@ type Targets = { needs: number; wants: number; savings: number }
 type Props = {
   month: string
   categories: Category[]
-  /** Map { category_id: planned_amount } du mois courant. */
-  budgets: Record<string, number>
+  /** Dépenses nommées du mois (une ligne = une dépense rattachée à une catégorie). */
+  lines: BudgetLine[]
   revenue: number
   targets: Targets
   canCopyPrevious: boolean
+}
+
+/* Ligne éditable côté client : label et montant en chaîne pour piloter les inputs. */
+type EditableLine = {
+  id: string
+  categoryId: string
+  label: string
+  amount: string
 }
 
 /* Type pré-sélectionné à la création d'une catégorie depuis chaque section. */
@@ -49,22 +63,28 @@ function formatEuros(n: number): string {
   })} €`
 }
 
+function toEditable(line: BudgetLine): EditableLine {
+  return {
+    id: line.id,
+    categoryId: line.category_id,
+    label: line.label ?? '',
+    amount: (line.planned_amount ?? 0).toString(),
+  }
+}
+
 export function BudgetEditor({
   month,
   categories,
-  budgets,
+  lines: initialLines,
   revenue,
   targets,
   canCopyPrevious,
 }: Props) {
   const router = useRouter()
 
-  // Montants éditables (chaîne pour piloter l'input). Initialisés depuis la base.
-  const [amounts, setAmounts] = useState<Record<string, string>>(() => {
-    const init: Record<string, string> = {}
-    for (const c of categories) init[c.id] = (budgets[c.id] ?? 0).toString()
-    return init
-  })
+  const [lines, setLines] = useState<EditableLine[]>(() =>
+    initialLines.map(toEditable),
+  )
 
   const [modal, setModal] = useState<{ open: boolean; type: CategoryType }>({
     open: false,
@@ -72,25 +92,57 @@ export function BudgetEditor({
   })
   const [copying, startCopy] = useTransition()
 
-  // Un timer de debounce par catégorie (sauvegarde au repos de la frappe).
+  // Timers de debounce, clés par `${lineId}:label` / `${lineId}:amount`
+  // (champs indépendants → un timer chacun pour ne pas s'annuler mutuellement).
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
-  function save(categoryId: string, value: string) {
-    void upsertBudget(month, categoryId, parseAmount(value))
+  function schedule(key: string, fn: () => void) {
+    clearTimeout(timers.current[key])
+    timers.current[key] = setTimeout(fn, 500)
   }
 
-  function handleChange(categoryId: string, raw: string) {
-    setAmounts((prev) => ({ ...prev, [categoryId]: raw }))
-    clearTimeout(timers.current[categoryId])
-    timers.current[categoryId] = setTimeout(() => save(categoryId, raw), 500)
+  function handleLabelChange(id: string, value: string) {
+    setLines((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, label: value } : l)),
+    )
+    schedule(`${id}:label`, () => {
+      void updateBudgetLine(id, { label: value.trim() })
+    })
   }
 
-  function handleBlur(categoryId: string, value: string) {
-    clearTimeout(timers.current[categoryId])
-    save(categoryId, value)
+  function handleLabelBlur(id: string, value: string) {
+    clearTimeout(timers.current[`${id}:label`])
+    void updateBudgetLine(id, { label: value.trim() })
   }
 
-  function openAdd(parent: ParentType) {
+  function handleAmountChange(id: string, value: string) {
+    setLines((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, amount: value } : l)),
+    )
+    schedule(`${id}:amount`, () => {
+      void updateBudgetLine(id, { planned_amount: parseAmount(value) })
+    })
+  }
+
+  function handleAmountBlur(id: string, value: string) {
+    clearTimeout(timers.current[`${id}:amount`])
+    void updateBudgetLine(id, { planned_amount: parseAmount(value) })
+  }
+
+  async function handleAdd(categoryId: string) {
+    const res = await createBudgetLine(month, categoryId)
+    if (res.error || !res.line) return
+    setLines((prev) => [...prev, toEditable(res.line!)])
+  }
+
+  function handleDelete(id: string) {
+    clearTimeout(timers.current[`${id}:label`])
+    clearTimeout(timers.current[`${id}:amount`])
+    setLines((prev) => prev.filter((l) => l.id !== id)) // optimiste
+    void deleteBudgetLine(id)
+  }
+
+  function openAddCategory(parent: ParentType) {
     setModal({ open: true, type: DEFAULT_TYPE[parent] })
   }
 
@@ -98,20 +150,21 @@ export function BudgetEditor({
     startCopy(async () => {
       const res = await copyPreviousMonth(month)
       if (res.error) return
-      setAmounts((prev) => {
-        const next = { ...prev }
-        for (const [id, amount] of Object.entries(res.amounts)) {
-          next[id] = amount.toString()
-        }
-        return next
-      })
+      setLines(res.lines.map(toEditable))
     })
   }
 
+  // Index { category_id -> Category } pour retrouver le parent_type d'une ligne.
+  const catById = new Map(categories.map((c) => [c.id, c]))
+
+  const linesOf = (categoryId: string) =>
+    lines.filter((l) => l.categoryId === categoryId)
+
   const parentTotal = (parent: ParentType) =>
-    categories
-      .filter((c) => c.parent_type === parent)
-      .reduce((sum, c) => sum + parseAmount(amounts[c.id] ?? '0'), 0)
+    lines.reduce((sum, l) => {
+      const cat = catById.get(l.categoryId)
+      return cat?.parent_type === parent ? sum + parseAmount(l.amount) : sum
+    }, 0)
 
   const totals = {
     besoin: parentTotal('besoin'),
@@ -130,12 +183,12 @@ export function BudgetEditor({
           className="w-full"
         >
           <CopyPlus size={18} aria-hidden="true" />
-          {copying ? 'Reprise…' : 'Reprendre les montants du mois précédent'}
+          {copying ? 'Reprise…' : 'Reprendre les dépenses du mois précédent'}
         </Button>
       )}
 
       {PARENT_ORDER.map((parent) => {
-        const items = categories.filter((c) => c.parent_type === parent)
+        const cats = categories.filter((c) => c.parent_type === parent)
         return (
           <section key={parent}>
             <div className="mb-2 flex items-center justify-between">
@@ -147,60 +200,114 @@ export function BudgetEditor({
               </span>
             </div>
 
-            <Card className="p-0">
-              {items.length === 0 && (
-                <p className="px-[18px] py-3 text-sm text-ink-3">
-                  Aucune catégorie dans cette section.
-                </p>
+            <div className="flex flex-col gap-3">
+              {cats.length === 0 && (
+                <Card className="py-3">
+                  <p className="text-sm text-ink-3">
+                    Aucune catégorie dans cette section.
+                  </p>
+                </Card>
               )}
 
-              {items.map((category, index) => (
-                <div
-                  key={category.id}
-                  className={cn(
-                    'flex items-center gap-3 px-[18px] py-2.5',
-                    index < items.length - 1 && 'border-b border-border',
-                  )}
-                >
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-card"
-                    style={{ backgroundColor: category.color }}
-                    aria-hidden="true"
-                  />
-                  <span className="min-w-0 flex-1 truncate text-sm text-ink">
-                    {category.name}
-                  </span>
-                  <input
-                    inputMode="decimal"
-                    value={amounts[category.id] ?? '0'}
-                    onChange={(e) => handleChange(category.id, e.target.value)}
-                    onBlur={(e) => handleBlur(category.id, e.target.value)}
-                    aria-label={`Montant prévu ${category.name}`}
-                    className={cn(
-                      'tabular h-11 w-24 rounded-card border border-border bg-surface',
-                      'px-3 text-right text-base text-ink outline-none',
-                      'transition-colors focus:border-ink',
-                    )}
-                  />
-                  <span className="w-3 text-sm text-ink-3" aria-hidden="true">
-                    €
-                  </span>
-                </div>
-              ))}
+              {cats.map((category) => {
+                const items = linesOf(category.id)
+                return (
+                  <Card key={category.id} className="p-0">
+                    {/* En-tête de catégorie */}
+                    <div className="flex items-center gap-3 px-[18px] py-2.5">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-card"
+                        style={{ backgroundColor: category.color }}
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight text-ink">
+                        {category.name}
+                      </span>
+                    </div>
 
-              {/* Création de catégorie à la volée */}
+                    {/* Dépenses nommées de la catégorie */}
+                    {items.map((line) => (
+                      <div
+                        key={line.id}
+                        className="flex items-center gap-2 border-t border-border px-[18px] py-2"
+                      >
+                        <input
+                          value={line.label}
+                          placeholder="Nom de la dépense"
+                          onChange={(e) =>
+                            handleLabelChange(line.id, e.target.value)
+                          }
+                          onBlur={(e) => handleLabelBlur(line.id, e.target.value)}
+                          aria-label="Nom de la dépense"
+                          className={cn(
+                            'h-11 min-w-0 flex-1 rounded-card border border-transparent bg-transparent',
+                            'px-2 text-sm text-ink outline-none placeholder:text-ink-3',
+                            'transition-colors focus:border-border-2 focus:bg-surface-2',
+                          )}
+                        />
+                        <input
+                          inputMode="decimal"
+                          value={line.amount}
+                          onChange={(e) =>
+                            handleAmountChange(line.id, e.target.value)
+                          }
+                          onBlur={(e) =>
+                            handleAmountBlur(line.id, e.target.value)
+                          }
+                          aria-label={`Montant prévu ${line.label || 'dépense'}`}
+                          className={cn(
+                            'tabular h-11 w-20 rounded-card border border-border bg-surface',
+                            'px-2 text-right text-base text-ink outline-none',
+                            'transition-colors focus:border-ink',
+                          )}
+                        />
+                        <span
+                          className="w-3 text-sm text-ink-3"
+                          aria-hidden="true"
+                        >
+                          €
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(line.id)}
+                          aria-label={`Supprimer ${line.label || 'cette dépense'}`}
+                          className="grid h-11 w-8 shrink-0 place-items-center text-ink-3 transition-colors hover:text-down"
+                        >
+                          <Trash2 size={16} aria-hidden="true" />
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Ajout d'une dépense nommée à cette catégorie */}
+                    <button
+                      type="button"
+                      onClick={() => handleAdd(category.id)}
+                      className={cn(
+                        'flex min-h-11 w-full items-center gap-2 px-[18px] py-2.5 text-sm text-ink-2',
+                        'border-t border-border hover:bg-surface-2',
+                      )}
+                    >
+                      <Plus size={16} aria-hidden="true" />
+                      Ajouter une dépense
+                    </button>
+                  </Card>
+                )
+              })}
+
+              {/* Création d'une nouvelle catégorie (à la volée) */}
               <button
                 type="button"
-                onClick={() => openAdd(parent)}
+                onClick={() => openAddCategory(parent)}
                 className={cn(
-                  'flex min-h-11 w-full items-center gap-2 px-[18px] py-3 text-sm text-ink-2',
-                  'border-t border-border hover:bg-surface-2',
+                  'flex min-h-11 w-full items-center justify-center gap-2 rounded-card',
+                  'border border-dashed border-border-2 py-2.5 text-sm text-ink-2',
+                  'hover:bg-surface-2',
                 )}
               >
-                <Plus size={18} aria-hidden="true" />
-                Ajouter une catégorie
+                <Plus size={16} aria-hidden="true" />
+                Nouvelle catégorie
               </button>
-            </Card>
+            </div>
           </section>
         )
       })}
