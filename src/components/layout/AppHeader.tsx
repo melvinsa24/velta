@@ -93,10 +93,7 @@ export function AppHeader() {
           'fixed inset-x-0 top-0 z-30 h-14 border-b border-border bg-surface',
         )}
       >
-        <div className="mx-auto flex h-full max-w-md items-center justify-between px-[18px]">
-          <span className="text-lg font-bold tracking-tight text-ink">
-            Velta
-          </span>
+        <div className="relative mx-auto flex h-full max-w-md items-center px-[18px]">
           <button
             type="button"
             onClick={() => setOpen(true)}
@@ -106,6 +103,10 @@ export function AppHeader() {
           >
             <Menu size={24} aria-hidden="true" />
           </button>
+          {/* « Velta » centré dans la largeur totale du header */}
+          <span className="pointer-events-none absolute inset-x-0 text-center text-lg font-bold tracking-tight text-ink">
+            Velta
+          </span>
         </div>
       </header>
 
