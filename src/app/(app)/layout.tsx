@@ -1,19 +1,22 @@
-import { TabBar } from '@/components/layout/TabBar'
+import { AppHeader } from '@/components/layout/AppHeader'
+import { Fab } from '@/components/layout/Fab'
 
 /*
- * Layout des écrans applicatifs (sous tab bar). Le groupe (app) isole ces
- * routes de l'écran de login (groupe (auth)) qui n'a pas de tab bar.
- * Marge d'écran 18px (cf. design system) ; padding bas pour ne pas passer
- * sous la tab bar fixe ni sous le FAB qui la surplombe (tab bar 4rem + safe
- * area + FAB 4rem + marges ≈ 10rem).
+ * Layout des écrans applicatifs. Le groupe (app) isole ces routes de l'écran
+ * de login (groupe (auth)) qui n'a ni header ni FAB. Marge d'écran 18px
+ * (cf. design system) ; padding haut pour le header fixe (56px) et padding
+ * bas pour ne pas passer sous le FAB flottant.
  */
 export default function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <div className="mx-auto w-full max-w-md flex-1 px-[18px] pt-[18px] pb-[calc(env(safe-area-inset-bottom)+10rem)]">
-      {children}
-      <TabBar />
-    </div>
+    <>
+      <AppHeader />
+      <div className="mx-auto w-full max-w-md flex-1 px-[18px] pt-[calc(3.5rem+18px)] pb-[100px]">
+        {children}
+      </div>
+      <Fab />
+    </>
   )
 }
