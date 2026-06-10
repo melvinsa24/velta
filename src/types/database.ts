@@ -135,7 +135,12 @@ export type TransactionUpdate = Partial<TransactionInsert>
 
 export interface MonthlySettings {
   month: string // date ISO (clé primaire), premier jour du mois
-  revenue_melvin: number
+  /** Revenu prévisionnel du mois (saisi dans Budget), base des % du récap. */
+  revenue_planned: number
+  /** Revenu réel — salaire net perçu (saisi dans Historique > Revenus). */
+  revenue_salaire: number
+  /** Revenu réel — autres entrées : primes, ventes Vinted, etc. */
+  revenue_autres: number
   revenue_flore: number
   apl: number | null
   target_needs_pct: number
@@ -146,7 +151,9 @@ export interface MonthlySettings {
 
 export interface MonthlySettingsInsert {
   month: string
-  revenue_melvin?: number
+  revenue_planned?: number
+  revenue_salaire?: number
+  revenue_autres?: number
   revenue_flore?: number
   apl?: number | null
   target_needs_pct?: number

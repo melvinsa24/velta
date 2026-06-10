@@ -31,7 +31,7 @@ export type TransactionFormInput = {
 
 type ActionResult = { error: string | null }
 
-const REVALIDATE_PATHS = ['/transactions', '/dashboard']
+const REVALIDATE_PATHS = ['/historique', '/dashboard']
 
 async function requireClient() {
   const supabase = await createClient()

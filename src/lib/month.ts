@@ -81,3 +81,22 @@ export function previousMonthStart(monthIso: string): string {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   return `${y}-${m}-01`
 }
+
+/** Premier jour du mois suivant, au format ISO 'YYYY-MM-01'. */
+export function nextMonthStart(monthIso: string): string {
+  const [year, month] = monthIso.split('-').map(Number)
+  // month = index 0-based du mois suivant (Date gère le passage d'année).
+  const d = new Date(year, month, 1)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  return `${y}-${m}-01`
+}
+
+/**
+ * Valide / normalise un paramètre de mois ('YYYY-MM-01'). Renvoie le mois en
+ * cours si la valeur est absente ou malformée (robustesse du sélecteur de mois).
+ */
+export function normalizeMonth(value: string | undefined | null): string {
+  if (value && /^\d{4}-\d{2}-01$/.test(value)) return value
+  return currentMonthStart()
+}

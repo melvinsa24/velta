@@ -22,7 +22,7 @@ export default async function BudgetPage() {
   const month = currentMonthStart()
   const prevMonth = previousMonthStart(month)
 
-  const [expensesRes, budgetsRes, prevBudgetsRes, settingsRes] =
+  const [expensesRes, budgetsRes, prevBudgetsRes, settingsRes, prevSettingsRes] =
     await Promise.all([
       supabase
         .from('expenses')
@@ -39,6 +39,11 @@ export default async function BudgetPage() {
         .select('*')
         .eq('month', month)
         .maybeSingle(),
+      supabase
+        .from('monthly_settings')
+        .select('revenue_planned')
+        .eq('month', prevMonth)
+        .maybeSingle(),
     ])
 
   const expenses = (expensesRes.data as Expense[] | null) ?? []
@@ -47,6 +52,14 @@ export default async function BudgetPage() {
     []
   const settings = (settingsRes.data as MonthlySettings | null) ?? null
   const prevHasData = ((prevBudgetsRes.data as unknown[] | null) ?? []).length > 0
+
+  // Revenu prévisionnel : valeur du mois, sinon reconduite du mois précédent
+  // pour pré-remplissage (SPECS §7.3). On considère 0 comme « non renseigné ».
+  const prevPlanned =
+    (prevSettingsRes.data as Pick<MonthlySettings, 'revenue_planned'> | null)
+      ?.revenue_planned ?? 0
+  const currentPlanned = settings?.revenue_planned ?? 0
+  const revenuePlanned = currentPlanned > 0 ? currentPlanned : prevPlanned
 
   return (
     <>
@@ -58,7 +71,7 @@ export default async function BudgetPage() {
         month={month}
         expenses={expenses}
         budgets={budgets}
-        revenue={settings?.revenue_melvin ?? 0}
+        revenuePlanned={revenuePlanned}
         targets={{
           needs: settings?.target_needs_pct ?? 50,
           wants: settings?.target_wants_pct ?? 30,

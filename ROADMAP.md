@@ -38,16 +38,12 @@
 - [x] CRUD catégories — **obsolète, à supprimer en Phase 5bis**
 - [x] Réglage de l'objectif %
 
-### Phase 5bis — Pivot modèle Dépenses ✅
+### Phase 5bis — Pivot modèle Dépenses 🔄
 > Suite à la clarification produit du 09/06/2026, le modèle de données change. Cf. SPECS §4–§6.
-> Réalisée en 2 sessions : **session 1 = backend**, **session 2 = refonte UI**.
-- [x] **(S1)** Migration SQL `003_expenses_pivot.sql` : table `expenses`, `monthly_budgets.expense_id` + unique (month, expense_id), `transactions.expense_id` + `category`, drop table `categories` (exécutée dans Supabase)
-- [x] **(S1)** Types (`expenses`, MonthlyBudget/Transaction repivotés) + `categoryMeta` (map `CATEGORY_PARENT`)
-- [x] **(S1)** Actions `expenses.ts` (create/update/archive) + `budget/actions.ts` repivoté (`upsertBudget`, `copyPreviousMonth` sur expense_id)
-- [x] **(S1)** Composant `ExpenseForm` (ex-CategoryForm) + `ColorPicker` déplacés dans `components/expense/`
-- [x] **(S2)** Écran Réglages finalisé : Objectifs % + Export (placeholder) + Compte, sans section Catégories
-- [x] **(S2)** Écran Budget refondu : sections Type > regroupement par Catégorie (`CATEGORIES_BY_PARENT`), saisie inline du montant (debounce + flush) via `upsertBudget`, modale `ExpenseForm` création (pré-filtrée) / édition + montant du mois
-- [x] **(S2)** Archivage de dépense (confirmation inline dans `ExpenseForm`) + reprise N-1 ; récap totaux via `CATEGORY_PARENT` ; suppression de `BudgetEditor.tsx.bak`
+- [ ] Migration SQL : créer table `expenses`, modifier `monthly_budgets` (lien vers expenses), `transactions` (lien vers expenses + champ category), supprimer table `categories`
+- [ ] Migration SQL : refonte `monthly_settings` — remplacer `revenue_melvin` par `revenue_planned` (prévisionnel), `revenue_salaire` (réel), `revenue_autres` (réel fourre-tout) ; `apl` reste ; ajouter `revenue_flore`
+- [ ] Refondre l'écran Réglages : supprimer la section Catégories (ne garder qu'Objectifs % + Compte + placeholder Export)
+- [ ] Refondre l'écran Budget : hiérarchie Type > Catégorie > Dépenses, modale "Nouvelle dépense" remplace "Nouvelle catégorie", champ "Revenus prévus" tout en haut
 
 ### Phase 6 — Budget prévisionnel ✅ (à refondre en Phase 5bis)
 - [x] Écran budget prévisionnel
@@ -56,20 +52,30 @@
 - [x] Récap des 3 totaux + comparaison à l'objectif %
 
 ### Phase 7 — Transactions ✅
-- [x] Bouton "+" opérationnel (désormais le **FAB** flottant, plus la tab bar — cf. refonte navigation)
+- [x] Bouton "+" central de la tab bar opérationnel
 - [x] Modale de saisie : date, montant, rattachement (dépense prévue OU catégorie libre), description
-- [x] Liste des transactions du mois (chronologique inverse, groupée par jour)
+- [x] Page Historique > Dépenses (liste chronologique inversée, groupement par jour)
 - [x] Édition / suppression des transactions
-- [x] Filtres par catégorie + "imprévues uniquement" (filtre « par dépense prévue » de SPECS §7.4 **volontairement reporté** : liste courte en usage réel, le filtre catégorie suffit)
+- [x] Filtres par catégorie, "imprévues uniquement"
+- [x] Sélecteur de mois sur Historique (réalisé en Phase 8a)
 
-### Phase 8 — Dashboard du mois
-- [ ] Affichage du mois en cours + sélecteur de mois
-- [ ] Bloc "reste à dépenser" (réel + après charges fixes)
-- [ ] 3 jauges besoins / envies / épargne vs objectif
+### Phase 8a — Historique + Revenus ✅
+> Migration 004 (`revenue_planned` ex-`revenue_melvin`, ajout `revenue_salaire` + `revenue_autres`) à exécuter manuellement dans Supabase SQL Editor.
+- [x] Renommage page Transactions → Historique + sous-onglets Dépenses / Revenus (soulignement sobre)
+- [x] Sous-onglet Revenus : saisie `revenue_salaire` + `revenue_autres` (sauvegarde au blur, envoyés ensemble) ; APL ma part en lecture seule (calculée depuis Flore, "—" si APL nulle ou Flore non renseigné) ; total réel
+- [x] Champ "Revenus prévus" (`revenue_planned`) en haut de l'écran Budget, reconduit du mois précédent, base des % du récap
+- [x] Sélecteur de mois sur Historique (param URL `?month=`, fix transactions antidatées)
+- [x] Actions `monthlySettings.ts` (`upsertRevenusReels`, `upsertRevenuPlanned`, `upsertNote`)
+
+### Phase 8b — Dashboard du mois
+- [ ] Affichage du mois en cours + sélecteur de mois sur Dashboard (réutiliser `MonthSelector`)
+- [ ] Lien vers Historique depuis le Dashboard (la nav par drawer ne l'expose plus)
+- [ ] Carte héro : reste à dépenser réel (`revenue_melvin_réel − Σtransactions`) + secondaire après charges fixes
+- [ ] 3 jauges besoins / envies / épargne vs objectif (base = `revenue_melvin_réel`)
 - [ ] Liste des dépenses avec budget vs réel + barres de progression
 - [ ] Bloc "Dépenses imprévues" (transactions sans expense_id)
 - [ ] Alertes visuelles (>80%, dépassement)
-- [ ] Note du mois (champ texte libre)
+- [ ] Note du mois (champ texte libre, via `upsertNote`)
 
 ### Phase 9 — Workflow mois
 - [ ] Bouton "Nouveau mois" (avec confirmation)
@@ -192,6 +198,6 @@ Je peux remplacer complètement mon Google Sheets actuel. Je saisis mes dépense
 | 2026-06-08 | Phase 6 | Budget prévisionnel + token --warn + refactor CategoryForm dans `components/category/` |
 | 2026-06-09 | Pré-Phase 7 | Migration 002 : ajout `monthly_budgets.label` + `transactions.monthly_budget_id`, drop unique constraint (`month`, `category_id`). Renommage UI : "Type" reste "Type", "Catégorie" reste, mapping Dépense = lignes du budget. |
 | 2026-06-09 | Phase 5bis | **Pivot modèle Dépenses** : refonte SPECS complète. Nouveau modèle Type > Catégorie (5 valeurs fixes) > Dépense (créée par l'utilisateur). Table `expenses` séparée, table `categories` supprimée. Couleur / share_mode / is_credit migrent sur la dépense. Réglages perd la section Catégories. |
-| 2026-06-09 | Phase 5bis · S1 | **Backend** : migration 003 (expenses + repivot monthly_budgets/transactions), types repivotés, `categoryMeta.CATEGORY_PARENT`, actions `expenses.ts` + `budget/actions.ts` (upsertBudget/copyPreviousMonth sur expense_id), `ExpenseForm`+`ColorPicker` dans `components/expense/`. Stubs build-green (Réglages sans Catégories, Budget placeholder). `BudgetEditor.tsx.bak` conservé. Migration non exécutée (à coller dans Supabase). UI Budget → session 2. |
-| 2026-06-09 | Phase 5bis · S2 | **Refonte UI** : migration 003 exécutée. Budget refondu (`BudgetEditor` v2 : sections Type > sous-groupes Catégorie via `CATEGORIES_BY_PARENT`, saisie inline du montant → `upsertBudget`, modale `ExpenseForm` création pré-filtrée / édition + montant du mois, archivage avec confirmation inline, reprise N-1, récap via `CATEGORY_PARENT`). Réglages finalisé (Objectifs % + Export + Compte). `BudgetEditor.tsx.bak` supprimé. Phase 5bis terminée. |
-| 2026-06-10 | Phase 7 | **Transactions**. Actions `lib/actions/transactions.ts` (create/update/delete ; `month` recalculé serveur depuis `date`, `category` figée depuis `expenses` en option A). `TransactionForm` partagé FAB + édition (toggle Dépense prévue / Catégorie libre, suppression confirmée inline). Écran `/transactions` (liste groupée par jour, filtres catégorie + imprévues). FAB câblé via `getMonthExpenseOptions` chargé dans `(app)/layout` (async → dette technique notée : refetch à chaque navigation, à optimiser Phase 14). Helpers `month.ts` (`todayIso`, `monthStartOfDate`, `formatDayLabel`). Lien temporaire « Voir les transactions » dans le drawer (à retirer Phase 8). |
+| 2026-06-10 | Phase 7 | Transactions : FAB opérationnel, modale de saisie, liste Historique > Dépenses, filtres catégorie + imprévues, édition/suppression. Sélecteur de mois reporté Phase 8. |
+| 2026-06-10 | Pré-Phase 8 | **Clarification modèle revenus** : `revenue_melvin` → `revenue_planned` (prévisionnel, écran Budget) + `revenue_salaire` + `revenue_autres` (réels, Historique > Revenus). APL saisie dans Flore, part Melvin calculée à la volée, lecture seule dans Historique. Onglet renommé Historique avec sous-onglets Dépenses / Revenus. |
+| 2026-06-10 | Phase 8a | **Historique + Revenus**. Migration 004 (revenue split — à exécuter manuellement). Types `MonthlySettings` repivotés. Actions `monthlySettings.ts` (upsertRevenusReels / upsertRevenuPlanned / upsertNote, revalidate /historique + /dashboard). Dossier `transactions/` → `historique/` (git mv), lien temporaire du drawer retiré, revalidatePath transactions → /historique. `HistoriqueScreen` (sélecteur de mois URL `?month=` via `MonthSelector` réutilisable + helpers `nextMonthStart`/`normalizeMonth`, sous-onglets sobres Dépenses/Revenus). `RevenusPanel` (salaire/autres au blur, APL ma part calculée lecture seule, total réel). Champ "Revenus prévus" en haut du Budget (`upsertRevenuPlanned` au blur, reconduit du N-1, base des % récap). |

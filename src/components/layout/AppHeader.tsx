@@ -8,7 +8,6 @@ import {
   Wallet,
   Users,
   Settings,
-  Receipt,
   Menu,
   X,
   type LucideIcon,
@@ -154,22 +153,6 @@ export function AppHeader() {
               onNavigate={() => setOpen(false)}
             />
           ))}
-
-          {/*
-           * Lien temporaire vers la liste des transactions (Phase 7). En Phase 8,
-           * la liste sera accessible depuis le Dashboard → ce lien sera retiré.
-           */}
-          <div className="mt-2 border-t border-border pt-2">
-            <DrawerLink
-              item={{
-                href: '/transactions',
-                label: 'Voir les transactions',
-                icon: Receipt,
-              }}
-              active={pathname.startsWith('/transactions')}
-              onNavigate={() => setOpen(false)}
-            />
-          </div>
         </div>
       </nav>
     </>

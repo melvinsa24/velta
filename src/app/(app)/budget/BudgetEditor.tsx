@@ -14,6 +14,7 @@ import {
 } from '@/lib/categoryMeta'
 import { ExpenseForm } from '@/components/expense/ExpenseForm'
 import { copyPreviousMonth, upsertBudget, type BudgetLine } from './actions'
+import { upsertRevenuPlanned } from '@/lib/actions/monthlySettings'
 import type { Expense, ParentType } from '@/types/database'
 
 type Targets = { needs: number; wants: number; savings: number }
@@ -24,7 +25,8 @@ type Props = {
   expenses: Expense[]
   /** Montants prévisionnels du mois courant (une ligne par dépense budgétée). */
   budgets: Pick<BudgetLine, 'expense_id' | 'planned_amount'>[]
-  revenue: number
+  /** Revenu prévisionnel du mois (déjà reconduit du N-1 si vide côté serveur). */
+  revenuePlanned: number
   targets: Targets
   /** Le mois N-1 a-t-il des montants à reprendre ? */
   prevHasData: boolean
@@ -69,11 +71,16 @@ export function BudgetEditor({
   month,
   expenses,
   budgets,
-  revenue,
+  revenuePlanned,
   targets,
   prevHasData,
 }: Props) {
   const router = useRouter()
+
+  // Revenu prévisionnel éditable (chaîne pour piloter l'input), sauvegardé au blur.
+  const [revenue, setRevenue] = useState(
+    revenuePlanned > 0 ? String(revenuePlanned) : '',
+  )
 
   // Montant saisi par dépense (chaîne, pour piloter les inputs).
   const [amounts, setAmounts] = useState<Record<string, string>>(() =>
@@ -139,6 +146,14 @@ export function BudgetEditor({
     router.refresh()
   }
 
+  // Sauvegarde du revenu prévisionnel au blur (pas à chaque frappe).
+  function saveRevenue() {
+    void upsertRevenuPlanned({ month, revenue_planned: parseAmount(revenue) })
+  }
+
+  // Revenu prévisionnel courant (base des % du récap).
+  const revenueNum = parseAmount(revenue)
+
   const amountOf = (expenseId: string) => amounts[expenseId] ?? ''
 
   const parentTotal = (parent: ParentType) =>
@@ -164,6 +179,34 @@ export function BudgetEditor({
 
   return (
     <div className="flex flex-col gap-8">
+      {/* Revenu prévisionnel du mois — base des % du récap (SPECS §7.3). */}
+      <div className="flex flex-col gap-1.5">
+        <label
+          htmlFor="revenue-planned"
+          className="text-[11px] font-semibold tracking-[0.14em] text-ink-3 uppercase"
+        >
+          Revenus prévus
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            id="revenue-planned"
+            inputMode="decimal"
+            value={revenue}
+            onChange={(e) => setRevenue(e.target.value)}
+            onBlur={saveRevenue}
+            placeholder="0"
+            className={cn(
+              'tabular h-11 flex-1 rounded-card border border-border bg-surface',
+              'px-3 text-right text-base text-ink outline-none',
+              'transition-colors focus:border-ink',
+            )}
+          />
+          <span className="w-3 text-sm text-ink-3" aria-hidden="true">
+            €
+          </span>
+        </div>
+      </div>
+
       {canCopyPrevious && (
         <Button
           variant="secondary"
@@ -260,7 +303,7 @@ export function BudgetEditor({
               key={parent}
               label={PARENT_LABELS[parent]}
               total={totals[parent]}
-              revenue={revenue}
+              revenue={revenueNum}
               targetPct={targets[TARGET_KEY[parent]]}
             />
           ))}
@@ -272,7 +315,7 @@ export function BudgetEditor({
             </span>
           </div>
 
-          {revenue === 0 && (
+          {revenueNum === 0 && (
             <p className="text-xs text-ink-3">
               Renseigne ton revenu du mois pour afficher les pourcentages.
             </p>

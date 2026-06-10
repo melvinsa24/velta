@@ -149,13 +149,17 @@ Une dépense est une définition durable (Loyer, Courses, PEA). Elle existe ind�
 ### Table `monthly_settings`
 
 - `month` (date, premier jour du mois, primary key)
-- `revenue_melvin` (numeric) — mes revenus du mois
+- `revenue_planned` (numeric) — revenu prévisionnel du mois (un seul chiffre, reconduit du mois précédent, modifiable depuis l'écran Budget)
+- `revenue_salaire` (numeric) — revenu réel : salaire net perçu
+- `revenue_autres` (numeric) — revenu réel : autres entrées (prime, vente Vinted, etc.)
 - `revenue_flore` (numeric) — revenus de Flore (pour calcul prorata). Si 0, toutes les charges partagées deviennent 100% à moi
-- `apl` (numeric, nullable) — APL touchée par moi, à reverser au prorata à Flore
+- `apl` (numeric, nullable) — APL brute saisie dans l'onglet Flore. La part revenant à Melvin est calculée à la volée : `apl × (revenue_melvin_réel / (revenue_melvin_réel + revenue_flore))`. Elle s'affiche en lecture seule dans Historique > Revenus.
 - `target_needs_pct` (numeric) — ex: 50
 - `target_wants_pct` (numeric) — ex: 30
 - `target_savings_pct` (numeric) — ex: 20
 - `note` (text, nullable) — la note libre du mois
+
+> `revenue_melvin_réel` (utilisé dans les calculs) = `revenue_salaire + revenue_autres + apl_part_melvin`. Jamais stocké, toujours calculé à la volée.
 
 ### Table `flore_payments`
 
@@ -213,6 +217,11 @@ Quand je clique sur "Nouveau mois" :
 
 ### 7.3 Budget prévisionnel
 
+**Champ revenu prévisionnel** (tout en haut de l'écran) :
+- Un seul champ numérique "Revenus prévus" → `monthly_settings.revenue_planned`
+- Pré-rempli depuis le mois précédent au moment du "Nouveau mois", modifiable à tout moment
+- Sert de base au calcul des % besoins/envies/épargne dans le récap en bas de page
+
 **Affichage** :
 - 3 sections verticales : **Besoins**, **Envies**, **Épargne**
 - Dans chaque section, les dépenses sont **regroupées par catégorie** :
@@ -239,11 +248,11 @@ Au submit : création d'une ligne dans `expenses` + une ligne dans `monthly_budg
 - Bouton "Supprimer" → archive l'expense (`archived = true`). Les transactions passées la conservent en référence ; elle disparaît des mois suivants.
 
 **Récap en bas de page** :
-- 3 totaux (Besoins / Envies / Épargne) avec % calculé sur `revenue_melvin`
+- 3 totaux (Besoins / Envies / Épargne) avec % calculé sur `revenue_planned`
 - Comparaison à l'objectif % (vert `--up` ±5%, ambre `--warn` 5-15%, rouge `--down` >15%)
 - Total global prévu
 
-### 7.4 Saisie d'une transaction
+### 7.4 Saisie d'une transaction (FAB "+")
 
 **Modale accessible via bouton "+" central de la tab bar, depuis n'importe quel écran** :
 - **Date** : pré-remplie à aujourd'hui, modifiable
@@ -256,18 +265,32 @@ Au submit : création d'une ligne dans `expenses` + une ligne dans `monthly_budg
 
 Au submit : insertion dans `transactions` avec ou sans `expense_id`. `category` est toujours rempli (copié depuis l'expense en option A, choisi par l'utilisateur en option B).
 
-**Vue liste des transactions** :
-- Liste chronologique inversée du mois en cours
-- Filtres : par catégorie, par dépense prévue (montre les transactions liées), "Imprévues uniquement"
-- Édition / suppression possible
+### 7.5 Écran Historique
 
-### 7.5 Répartition Flore
+L'écran s'appelle **Historique** (et non "Transactions"). Il contient deux sous-onglets :
+
+**Sous-onglet Dépenses** :
+- Liste chronologique inversée des transactions du mois en cours
+- Groupement par date (label "Aujourd'hui", "Hier", ou "12 juin")
+- Pour chaque transaction : pastille couleur (couleur de l'expense si rattachée, sinon `--ink-3`), description, catégorie en label secondaire, montant en `--ink`, nom de dépense en sous-label discret si rattachée
+- Filtres : par catégorie (Type ou sous-catégorie), "Imprévues uniquement" (sans `expense_id`)
+- Tap → modale d'édition / suppression
+
+**Sous-onglet Revenus** :
+- Trois lignes fixes :
+  - **Salaire** → champ numérique éditable (`revenue_salaire`)
+  - **APL (ma part)** → affiché en lecture seule, calculé depuis `apl × ratio_melvin`. Non éditable ici — label discret indiquant que la valeur vient de l'onglet Flore. Affiche "—" tant que Flore n'est pas renseigné.
+  - **Autres** → champ numérique éditable (`revenue_autres`) — fourre-tout (primes, ventes Vinted, etc.)
+- **Total réel** = salaire + APL ma part + autres, affiché en bas
+
+> Le revenu réel total (`revenue_melvin_réel`) sert de base aux ratios besoins/envies/épargne sur le Dashboard.
+
+### 7.6 Répartition Flore
 
 **Inputs** (en haut de l'écran) :
-- Mes revenus du mois : préremplis depuis `monthly_settings.revenue_melvin`
-- Revenus de Flore : préremplis depuis `monthly_settings.revenue_flore`
-- APL : préremplie depuis `monthly_settings.apl`
-- Si revenu Flore = 0 → toutes les charges partagées sont automatiquement 100% à moi (lui afficher un message explicatif)
+- APL brute du mois → `monthly_settings.apl` (saisie ici, se répercute automatiquement dans Historique > Revenus)
+- Revenus de Flore → `monthly_settings.revenue_flore`
+- Si revenu Flore = 0 → toutes les charges partagées sont automatiquement 100% à moi (afficher message explicatif)
 
 **Affichage** :
 - Ratio de répartition (ex: 73,6% / 26,4%)
@@ -288,7 +311,7 @@ Au submit : insertion dans `transactions` avec ou sans `expense_id`. `category` 
 - Le montant total apparaît uniquement dans le module Flore pour le calcul
 - Si revenu Flore = 0, le montant affiché redevient le total (101€)
 
-### 7.6 Simulateur (MVP : court terme uniquement)
+### 7.7 Simulateur (MVP : court terme uniquement)
 
 **Écran** :
 - Champ "Ajouter une dépense fictive"
@@ -303,7 +326,7 @@ Au submit : insertion dans `transactions` avec ou sans `expense_id`. `category` 
 
 > Le simulateur ne modifie jamais la base de données tant que je ne convertis pas.
 
-### 7.7 Récap annuel
+### 7.8 Récap annuel
 
 **Affichage** :
 1. **Graphiques** — palette restreinte au design system (`--ink`, `--accent`, `--up`, `--down`, `--ink-2`) :
@@ -317,7 +340,7 @@ Au submit : insertion dans `transactions` avec ou sans `expense_id`. `category` 
 
 Les mois non remplis affichent un tiret, pas un `#DIV/0!`.
 
-### 7.8 Réglages
+### 7.9 Réglages
 
 > La gestion des dépenses se fait depuis l'écran Budget, pas depuis Réglages.
 
