@@ -125,9 +125,9 @@ export function AppHeader() {
         aria-label="Navigation principale"
         aria-hidden={!open}
         className={cn(
-          'fixed inset-y-0 right-0 z-50 flex w-[72%] max-w-[280px] flex-col bg-surface',
+          'fixed inset-y-0 left-0 z-50 flex w-[72%] max-w-[280px] flex-col bg-surface',
           'transition-transform duration-300 ease-in-out',
-          open ? 'translate-x-0' : 'translate-x-full',
+          open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
         <div className="flex h-14 items-center justify-between border-b border-border px-[18px]">
