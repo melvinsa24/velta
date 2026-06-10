@@ -55,12 +55,12 @@
 - [x] Saisie inline des montants
 - [x] Récap des 3 totaux + comparaison à l'objectif %
 
-### Phase 7 — Transactions
-- [ ] Bouton "+" central de la tab bar opérationnel
-- [ ] Modale de saisie : date, montant, rattachement (dépense prévue OU catégorie libre), description
-- [ ] Liste des transactions du mois (chronologique inverse)
-- [ ] Édition / suppression des transactions
-- [ ] Filtres par catégorie, par dépense prévue, "imprévues uniquement"
+### Phase 7 — Transactions ✅
+- [x] Bouton "+" opérationnel (désormais le **FAB** flottant, plus la tab bar — cf. refonte navigation)
+- [x] Modale de saisie : date, montant, rattachement (dépense prévue OU catégorie libre), description
+- [x] Liste des transactions du mois (chronologique inverse, groupée par jour)
+- [x] Édition / suppression des transactions
+- [x] Filtres par catégorie + "imprévues uniquement" (filtre « par dépense prévue » de SPECS §7.4 **volontairement reporté** : liste courte en usage réel, le filtre catégorie suffit)
 
 ### Phase 8 — Dashboard du mois
 - [ ] Affichage du mois en cours + sélecteur de mois
@@ -194,3 +194,4 @@ Je peux remplacer complètement mon Google Sheets actuel. Je saisis mes dépense
 | 2026-06-09 | Phase 5bis | **Pivot modèle Dépenses** : refonte SPECS complète. Nouveau modèle Type > Catégorie (5 valeurs fixes) > Dépense (créée par l'utilisateur). Table `expenses` séparée, table `categories` supprimée. Couleur / share_mode / is_credit migrent sur la dépense. Réglages perd la section Catégories. |
 | 2026-06-09 | Phase 5bis · S1 | **Backend** : migration 003 (expenses + repivot monthly_budgets/transactions), types repivotés, `categoryMeta.CATEGORY_PARENT`, actions `expenses.ts` + `budget/actions.ts` (upsertBudget/copyPreviousMonth sur expense_id), `ExpenseForm`+`ColorPicker` dans `components/expense/`. Stubs build-green (Réglages sans Catégories, Budget placeholder). `BudgetEditor.tsx.bak` conservé. Migration non exécutée (à coller dans Supabase). UI Budget → session 2. |
 | 2026-06-09 | Phase 5bis · S2 | **Refonte UI** : migration 003 exécutée. Budget refondu (`BudgetEditor` v2 : sections Type > sous-groupes Catégorie via `CATEGORIES_BY_PARENT`, saisie inline du montant → `upsertBudget`, modale `ExpenseForm` création pré-filtrée / édition + montant du mois, archivage avec confirmation inline, reprise N-1, récap via `CATEGORY_PARENT`). Réglages finalisé (Objectifs % + Export + Compte). `BudgetEditor.tsx.bak` supprimé. Phase 5bis terminée. |
+| 2026-06-10 | Phase 7 | **Transactions**. Actions `lib/actions/transactions.ts` (create/update/delete ; `month` recalculé serveur depuis `date`, `category` figée depuis `expenses` en option A). `TransactionForm` partagé FAB + édition (toggle Dépense prévue / Catégorie libre, suppression confirmée inline). Écran `/transactions` (liste groupée par jour, filtres catégorie + imprévues). FAB câblé via `getMonthExpenseOptions` chargé dans `(app)/layout` (async → dette technique notée : refetch à chaque navigation, à optimiser Phase 14). Helpers `month.ts` (`todayIso`, `monthStartOfDate`, `formatDayLabel`). Lien temporaire « Voir les transactions » dans le drawer (à retirer Phase 8). |

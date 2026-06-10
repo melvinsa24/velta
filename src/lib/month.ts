@@ -26,10 +26,50 @@ export function currentMonthStart(): string {
   return `${year}-${month}-01`
 }
 
+/** Date du jour au format ISO 'YYYY-MM-DD' (date locale). Défaut de saisie. */
+export function todayIso(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * 'YYYY-MM-DD' → premier jour de son mois 'YYYY-MM-01'. Sert à calculer le
+ * `month` d'une transaction côté serveur depuis sa date (SPECS §6, jamais null).
+ * Manipulation purement textuelle : pas de fuseau horaire en jeu.
+ */
+export function monthStartOfDate(dateIso: string): string {
+  const [year, month] = dateIso.split('-')
+  return `${year}-${month}-01`
+}
+
 /** 'YYYY-MM-01' → 'Juin 2026' (affichage français). */
 export function formatMonthLabel(monthIso: string): string {
   const [year, month] = monthIso.split('-').map(Number)
   return `${MONTHS_FR[month - 1]} ${year}`
+}
+
+/**
+ * 'YYYY-MM-DD' → libellé de jour pour le groupement de la liste transactions :
+ * « Aujourd'hui », « Hier », ou « 12 juin » (mois en minuscule, sans année).
+ * Comparaison sur les chaînes ISO locales (todayIso) : robuste aux fuseaux.
+ */
+export function formatDayLabel(dateIso: string): string {
+  const today = todayIso()
+  if (dateIso === today) return "Aujourd'hui"
+
+  // Hier = veille de la date du jour (Date local, gère les bornes de mois/an).
+  const [ty, tm, td] = today.split('-').map(Number)
+  const yesterday = new Date(ty, tm - 1, td - 1)
+  const yIso = `${yesterday.getFullYear()}-${String(
+    yesterday.getMonth() + 1,
+  ).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
+  if (dateIso === yIso) return 'Hier'
+
+  const [, month, day] = dateIso.split('-').map(Number)
+  return `${day} ${MONTHS_FR[month - 1].toLowerCase()}`
 }
 
 /** Premier jour du mois précédent, au format ISO 'YYYY-MM-01'. */
