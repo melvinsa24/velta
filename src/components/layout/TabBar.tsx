@@ -15,9 +15,9 @@ import { cn } from '@/lib/cn'
 import { Modal } from '@/components/ui'
 
 /*
- * Tab bar basse (cf. SPECS §4 + VELTA_DESIGN_SYSTEM.md).
- * 4 onglets + bouton « + » central lime. Verre dépoli, point lime sous
- * l'onglet actif. Icônes exclusivement lucide-react.
+ * Navigation basse (cf. SPECS §4 + VELTA_DESIGN_SYSTEM.md).
+ * Tab bar 4 onglets (icônes seules) + FAB « + » flottant indépendant,
+ * en bas à droite, au-dessus de la tab bar. Icônes lucide-react uniquement.
  */
 type Tab = { href: string; label: string; icon: LucideIcon }
 
@@ -28,20 +28,25 @@ const tabs: Tab[] = [
   { href: '/reglages', label: 'Réglages', icon: Settings },
 ]
 
+// Hauteur du contenu de la tab bar (hors safe area). Sert de repère pour
+// positionner le FAB juste au-dessus.
+const TAB_BAR_HEIGHT = '4rem' // 64px
+
 function TabLink({ tab, active }: { tab: Tab; active: boolean }) {
   const Icon = tab.icon
   return (
     <Link
       href={tab.href}
+      aria-label={tab.label}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'flex min-h-11 flex-1 flex-col items-center justify-center gap-1 py-1.5',
+        // Cible tactile ≥ 44px
+        'flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-1.5 py-2',
         active ? 'text-ink' : 'text-ink-3',
       )}
     >
-      <Icon size={22} aria-hidden="true" />
-      <span className="text-[11px] font-medium tracking-tight">{tab.label}</span>
-      {/* Point lime sous l'onglet actif */}
+      <Icon size={28} aria-hidden="true" />
+      {/* Point lime centré sous l'icône de l'onglet actif */}
       <span
         className={cn(
           'h-1 w-1 rounded-full',
@@ -57,48 +62,20 @@ export function TabBar() {
   const pathname = usePathname()
   const [quickAddOpen, setQuickAddOpen] = useState(false)
 
-  // 2 onglets de chaque côté du bouton « + » central.
-  const left = tabs.slice(0, 2)
-  const right = tabs.slice(2)
-
   return (
     <>
+      {/* Tab bar — 4 onglets icônes seules */}
       <nav
         aria-label="Navigation principale"
+        style={{ height: `calc(${TAB_BAR_HEIGHT} + env(safe-area-inset-bottom))` }}
         className={cn(
-          'fixed inset-x-0 bottom-0 z-40 border-t border-border',
-          // Verre dépoli
-          'bg-surface/80 backdrop-blur-lg',
-          // Marge de sécurité pour l'encoche / barre home iOS
+          'fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface',
+          // Marge de sécurité pour la barre home iOS
           'pb-[env(safe-area-inset-bottom)]',
         )}
       >
-        <div className="mx-auto flex max-w-md items-center px-2">
-          {left.map((tab) => (
-            <TabLink
-              key={tab.href}
-              tab={tab}
-              active={pathname.startsWith(tab.href)}
-            />
-          ))}
-
-          {/* Bouton + central (saisie rapide — modale vide pour l'instant) */}
-          <div className="flex flex-1 justify-center">
-            <button
-              type="button"
-              onClick={() => setQuickAddOpen(true)}
-              aria-label="Ajouter une transaction"
-              className={cn(
-                'flex h-12 w-12 items-center justify-center rounded-full',
-                'bg-accent text-accent-ink shadow-accent',
-                'transition-transform duration-150 hover:-translate-y-0.5 active:bg-accent-press',
-              )}
-            >
-              <Plus size={24} aria-hidden="true" />
-            </button>
-          </div>
-
-          {right.map((tab) => (
+        <div className="mx-auto flex h-16 max-w-md items-center px-2">
+          {tabs.map((tab) => (
             <TabLink
               key={tab.href}
               tab={tab}
@@ -107,6 +84,23 @@ export function TabBar() {
           ))}
         </div>
       </nav>
+
+      {/* FAB « + » — flottant, au-dessus de la tab bar (saisie rapide) */}
+      <button
+        type="button"
+        onClick={() => setQuickAddOpen(true)}
+        aria-label="Ajouter une transaction"
+        style={{
+          bottom: `calc(${TAB_BAR_HEIGHT} + env(safe-area-inset-bottom) + 1rem)`,
+        }}
+        className={cn(
+          'fixed right-[18px] z-50 flex h-16 w-16 items-center justify-center rounded-full',
+          'bg-accent text-accent-ink shadow-accent',
+          'transition-transform duration-150 hover:-translate-y-0.5 active:bg-accent-press',
+        )}
+      >
+        <Plus size={28} aria-hidden="true" />
+      </button>
 
       <Modal
         open={quickAddOpen}
