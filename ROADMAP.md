@@ -67,15 +67,15 @@
 - [x] Sélecteur de mois sur Historique (param URL `?month=`, fix transactions antidatées)
 - [x] Actions `monthlySettings.ts` (`upsertRevenusReels`, `upsertRevenuPlanned`, `upsertNote`)
 
-### Phase 8b — Dashboard du mois
-- [ ] Affichage du mois en cours + sélecteur de mois sur Dashboard (réutiliser `MonthSelector`)
-- [ ] Lien vers Historique depuis le Dashboard (la nav par drawer ne l'expose plus)
-- [ ] Carte héro : reste à dépenser réel (`revenue_melvin_réel − Σtransactions`) + secondaire après charges fixes
-- [ ] 3 jauges besoins / envies / épargne vs objectif (base = `revenue_melvin_réel`)
-- [ ] Liste des dépenses avec budget vs réel + barres de progression
-- [ ] Bloc "Dépenses imprévues" (transactions sans expense_id)
-- [ ] Alertes visuelles (>80%, dépassement)
-- [ ] Note du mois (champ texte libre, via `upsertNote`)
+### Phase 8b — Dashboard du mois ✅
+- [x] Affichage du mois en cours sur Dashboard (label statique ; sélecteur de mois reporté Phase 9)
+- [x] Lien vers Historique depuis le Dashboard (label d'état « revenus non renseignés » → `/historique`)
+- [x] Carte héro : reste à dépenser réel (`revenue_melvin_réel − Σtransactions`) + secondaire après charges fixes
+- [x] 3 jauges besoins / envies / épargne vs objectif (base = `revenue_melvin_réel`)
+- [x] Liste des dépenses avec budget vs réel + barres de progression
+- [x] Bloc "Dépenses imprévues" (transactions sans expense_id)
+- [x] Alertes visuelles (>80%, dépassement)
+- [x] Note du mois (champ texte libre, via `upsertNote`)
 
 ### Phase 9 — Workflow mois
 - [ ] Bouton "Nouveau mois" (avec confirmation)
@@ -200,4 +200,5 @@ Je peux remplacer complètement mon Google Sheets actuel. Je saisis mes dépense
 | 2026-06-09 | Phase 5bis | **Pivot modèle Dépenses** : refonte SPECS complète. Nouveau modèle Type > Catégorie (5 valeurs fixes) > Dépense (créée par l'utilisateur). Table `expenses` séparée, table `categories` supprimée. Couleur / share_mode / is_credit migrent sur la dépense. Réglages perd la section Catégories. |
 | 2026-06-10 | Phase 7 | Transactions : FAB opérationnel, modale de saisie, liste Historique > Dépenses, filtres catégorie + imprévues, édition/suppression. Sélecteur de mois reporté Phase 8. |
 | 2026-06-10 | Pré-Phase 8 | **Clarification modèle revenus** : `revenue_melvin` → `revenue_planned` (prévisionnel, écran Budget) + `revenue_salaire` + `revenue_autres` (réels, Historique > Revenus). APL saisie dans Flore, part Melvin calculée à la volée, lecture seule dans Historique. Onglet renommé Historique avec sous-onglets Dépenses / Revenus. |
+| 2026-06-22 | Phase 8b | **Dashboard du mois**. Helper `src/lib/calculs.ts` (`revenusReelsMelvin` — revenu réel jamais stocké, part APL au prorata ; `realTotalsByParent` — réel ventilé par Type). `dashboard/page.tsx` Server Component : charge `monthly_settings` + transactions + `monthly_budgets` joints `expenses(label,color,category)` du mois en cours, calcule tous les agrégats à la volée. Carte héro `--ink` (reste réel + reste après charges fixes prévues non couvertes, SPECS §9.5 ; « — » + lien Historique si revenu nul). 3 jauges lime vs objectif (code couleur écart ±5/15 %). Liste dépenses budget vs réel (mini-jauge --ink, --warn ≥80 %, bordure --down + « ⚠ Dépassé de X€ » si dépassement). Bloc Dépenses imprévues (transactions sans `expense_id` regroupées par catégorie + total). `MonthNote` (client, sauvegarde auto débouncée 800 ms via `upsertNote`). Mois figé au mois en cours (sélecteur reporté Phase 9). |
 | 2026-06-10 | Phase 8a | **Historique + Revenus**. Migration 004 (revenue split — à exécuter manuellement). Types `MonthlySettings` repivotés. Actions `monthlySettings.ts` (upsertRevenusReels / upsertRevenuPlanned / upsertNote, revalidate /historique + /dashboard). Dossier `transactions/` → `historique/` (git mv), lien temporaire du drawer retiré, revalidatePath transactions → /historique. `HistoriqueScreen` (sélecteur de mois URL `?month=` via `MonthSelector` réutilisable + helpers `nextMonthStart`/`normalizeMonth`, sous-onglets sobres Dépenses/Revenus). `RevenusPanel` (salaire/autres au blur, APL ma part calculée lecture seule, total réel). Champ "Revenus prévus" en haut du Budget (`upsertRevenuPlanned` au blur, reconduit du N-1, base des % récap). |
