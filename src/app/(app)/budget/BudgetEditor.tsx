@@ -30,6 +30,8 @@ type Props = {
   targets: Targets
   /** Le mois N-1 a-t-il des montants à reprendre ? */
   prevHasData: boolean
+  /** Mois clôturé : montants en lecture seule, mutations désactivées (Phase 9). */
+  readOnly?: boolean
 }
 
 /* Cible d'objectif % par parent_type. */
@@ -74,6 +76,7 @@ export function BudgetEditor({
   revenuePlanned,
   targets,
   prevHasData,
+  readOnly = false,
 }: Props) {
   const router = useRouter()
 
@@ -179,6 +182,13 @@ export function BudgetEditor({
 
   return (
     <div className="flex flex-col gap-8">
+      {/* Bandeau « mois clôturé » : les modifications sont désactivées (Phase 9). */}
+      {readOnly && (
+        <div className="rounded-card border border-border bg-surface-2 px-3 py-2.5 text-sm text-ink-2">
+          Mois clôturé — les modifications sont désactivées.
+        </div>
+      )}
+
       {/* Revenu prévisionnel du mois — base des % du récap (SPECS §7.3). */}
       <div className="flex flex-col gap-1.5">
         <label
@@ -195,10 +205,12 @@ export function BudgetEditor({
             onChange={(e) => setRevenue(e.target.value)}
             onBlur={saveRevenue}
             placeholder="0"
+            disabled={readOnly}
             className={cn(
               'tabular h-11 flex-1 rounded-card border border-border bg-surface',
               'px-3 text-right text-base text-ink outline-none',
               'transition-colors focus:border-ink',
+              'disabled:opacity-60',
             )}
           />
           <span className="w-3 text-sm text-ink-3" aria-hidden="true">
@@ -207,7 +219,7 @@ export function BudgetEditor({
         </div>
       </div>
 
-      {canCopyPrevious && (
+      {canCopyPrevious && !readOnly && (
         <Button
           variant="secondary"
           onClick={handleCopy}
@@ -263,6 +275,7 @@ export function BudgetEditor({
                           expense={expense}
                           amount={amountOf(expense.id)}
                           isFirst={index === 0}
+                          readOnly={readOnly}
                           onEdit={() => setModal({ mode: 'edit', expense })}
                           onAmountChange={(v) =>
                             handleAmountChange(expense.id, v)
@@ -275,18 +288,20 @@ export function BudgetEditor({
                 )
               })}
 
-              <button
-                type="button"
-                onClick={() => setModal({ mode: 'add', parent })}
-                className={cn(
-                  'flex min-h-11 w-full items-center justify-center gap-2 rounded-card',
-                  'border border-dashed border-border-2 py-2.5 text-sm text-ink-2',
-                  'hover:bg-surface-2',
-                )}
-              >
-                <Plus size={16} aria-hidden="true" />
-                Ajouter une dépense
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => setModal({ mode: 'add', parent })}
+                  className={cn(
+                    'flex min-h-11 w-full items-center justify-center gap-2 rounded-card',
+                    'border border-dashed border-border-2 py-2.5 text-sm text-ink-2',
+                    'hover:bg-surface-2',
+                  )}
+                >
+                  <Plus size={16} aria-hidden="true" />
+                  Ajouter une dépense
+                </button>
+              )}
             </div>
           </section>
         )
@@ -359,6 +374,7 @@ function ExpenseRow({
   expense,
   amount,
   isFirst,
+  readOnly,
   onEdit,
   onAmountChange,
   onAmountBlur,
@@ -366,6 +382,7 @@ function ExpenseRow({
   expense: Expense
   amount: string
   isFirst: boolean
+  readOnly: boolean
   onEdit: () => void
   onAmountChange: (value: string) => void
   onAmountBlur: (value: string) => void
@@ -380,8 +397,12 @@ function ExpenseRow({
       <button
         type="button"
         onClick={onEdit}
+        disabled={readOnly}
         aria-label={`Modifier ${expense.label}`}
-        className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-card px-1 text-left hover:bg-surface-2"
+        className={cn(
+          'flex h-11 min-w-0 flex-1 items-center gap-3 rounded-card px-1 text-left',
+          !readOnly && 'hover:bg-surface-2',
+        )}
       >
         <span
           className="h-2.5 w-2.5 shrink-0 rounded-card"
@@ -398,11 +419,13 @@ function ExpenseRow({
         onChange={(e) => onAmountChange(e.target.value)}
         onBlur={(e) => onAmountBlur(e.target.value)}
         placeholder="0"
+        disabled={readOnly}
         aria-label={`Montant prévu ${expense.label}`}
         className={cn(
           'tabular h-11 w-24 rounded-card border border-border bg-surface',
           'px-2 text-right text-base text-ink outline-none',
           'transition-colors focus:border-ink',
+          'disabled:opacity-60',
         )}
       />
       <span className="w-3 text-sm text-ink-3" aria-hidden="true">

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button, Card, ConfirmModal } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { newMonth, closeMonth, reopenMonth } from '@/lib/actions/months'
@@ -36,8 +37,22 @@ export function MonthManagementSection({
   prevLabel,
   prevClosed,
 }: Props) {
+  const router = useRouter()
   const [modal, setModal] = useState<ModalKind>(null)
   const close = () => setModal(null)
+  // Rafraîchit les données serveur (statut du mois, cibles de réouverture) après
+  // chaque action, en complément du revalidatePath côté Server Action.
+  const refresh = () => router.refresh()
+
+  const isClosed = activeStatus === 'closed'
+  // Cible de réouverture : le mois actif lui-même s'il est clôturé (cas « je viens
+  // de clôturer »), sinon le mois précédent s'il est clôturé (cas post « nouveau
+  // mois »). Permet de rouvrir le mois qu'on vient de fermer.
+  const reopenTarget = isClosed
+    ? { month: activeMonth, label: activeLabel }
+    : prevClosed
+      ? { month: prevMonth, label: prevLabel }
+      : null
 
   return (
     <section>
@@ -78,13 +93,17 @@ export function MonthManagementSection({
             </p>
           )}
 
-          <Button variant="secondary" onClick={() => setModal('close')}>
-            Clôturer ce mois
+          <Button
+            variant="secondary"
+            onClick={() => setModal('close')}
+            disabled={isClosed}
+          >
+            {isClosed ? 'Mois déjà clôturé' : 'Clôturer ce mois'}
           </Button>
 
-          {prevClosed && (
+          {reopenTarget && (
             <Button variant="secondary" onClick={() => setModal('reopen')}>
-              Rouvrir {prevLabel}
+              Rouvrir {reopenTarget.label}
             </Button>
           )}
         </div>
@@ -105,6 +124,7 @@ export function MonthManagementSection({
           </>
         }
         onConfirm={() => newMonth(activeMonth)}
+        onSuccess={refresh}
       />
 
       <ConfirmModal
@@ -120,21 +140,23 @@ export function MonthManagementSection({
           </>
         }
         onConfirm={() => closeMonth(activeMonth)}
+        onSuccess={refresh}
       />
 
       <ConfirmModal
         open={modal === 'reopen'}
         onClose={close}
-        title={`Rouvrir ${prevLabel}`}
+        title={`Rouvrir ${reopenTarget?.label ?? ''}`}
         confirmLabel="Rouvrir"
         pendingLabel="Réouverture…"
         message={
           <>
-            {prevLabel} repassera « en cours ». Aucune donnée n’est modifiée (ni
-            les transactions, ni les budgets du mois suivant).
+            {reopenTarget?.label} repassera « en cours ». Aucune donnée n’est
+            modifiée (ni les transactions, ni les budgets du mois suivant).
           </>
         }
-        onConfirm={() => reopenMonth(prevMonth)}
+        onConfirm={() => reopenMonth(reopenTarget?.month ?? activeMonth)}
+        onSuccess={refresh}
       />
     </section>
   )

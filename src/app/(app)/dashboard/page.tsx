@@ -6,11 +6,12 @@ import { createClient } from '@/lib/supabase/server'
 import { formatMonthLabel } from '@/lib/month'
 import { getMonthContext } from '@/lib/data/activeMonth'
 import { getCreditsInProgress, type CreditRow } from '@/lib/data/credits'
+import { getUnplannedDetail } from '@/lib/data/unplanned'
 import { realTotalsByParent, revenusReelsMelvin } from '@/lib/calculs'
 import { MonthRolloverBanner } from './MonthRolloverBanner'
+import { UnplannedSection } from './UnplannedSection'
 import {
   CATEGORY_PARENT,
-  CATEGORY_TYPE_LABELS,
   PARENT_LABELS,
   PARENT_ORDER,
 } from '@/lib/categoryMeta'
@@ -59,7 +60,7 @@ export default async function DashboardPage() {
   const { activeMonth: month, isBehind, nextMonth } = await getMonthContext()
   const supabase = await createClient()
 
-  const [settingsRes, txRes, budgetsRes, credits] = await Promise.all([
+  const [settingsRes, txRes, budgetsRes, credits, unplanned] = await Promise.all([
     supabase.from('monthly_settings').select('*').eq('month', month).maybeSingle(),
     supabase
       .from('transactions')
@@ -75,6 +76,8 @@ export default async function DashboardPage() {
       .eq('expenses.archived', false),
     // Crédits en cours (is_credit + non archivés), mensualité = montant du mois actif.
     getCreditsInProgress(month),
+    // Dépenses imprévues détaillées (filtre strict expense_id IS NULL côté requête).
+    getUnplannedDetail(month),
   ])
 
   const settings = settingsRes.data as MonthlySettings | null
@@ -126,19 +129,8 @@ export default async function DashboardPage() {
     )
   }
 
-  // --- Bloc imprévues : transactions sans dépense, regroupées par catégorie.
-  const unplannedByCategory = new Map<CategoryType, number>()
-  for (const t of transactions) {
-    if (t.expense_id) continue
-    unplannedByCategory.set(
-      t.category,
-      (unplannedByCategory.get(t.category) ?? 0) + t.amount,
-    )
-  }
-  const unplannedTotal = [...unplannedByCategory.values()].reduce(
-    (sum, v) => sum + v,
-    0,
-  )
+  // Bloc « Dépenses imprévues » : détail fourni par getUnplannedDetail (filtre
+  // strict expense_id IS NULL côté requête) → rendu par <UnplannedSection>.
 
   const hasRevenue = revenusReels > 0
 
@@ -248,34 +240,8 @@ export default async function DashboardPage() {
             })
           )}
 
-          {/* Dépenses imprévues — transactions sans dépense prévue. */}
-          {unplannedByCategory.size > 0 && (
-            <div className="mt-2 flex flex-col gap-1.5">
-              <div className="flex items-center justify-between px-1">
-                <p className="text-[11px] font-semibold tracking-[0.12em] text-ink-3 uppercase">
-                  Dépenses imprévues
-                </p>
-                <span className="tabular text-sm font-medium text-ink-2">
-                  {formatEuros(unplannedTotal)}
-                </span>
-              </div>
-              <Card className="flex flex-col gap-2.5">
-                {[...unplannedByCategory.entries()].map(([category, amount]) => (
-                  <div
-                    key={category}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <span className="text-sm text-ink">
-                      {CATEGORY_TYPE_LABELS[category]}
-                    </span>
-                    <span className="tabular text-sm font-medium text-ink">
-                      {formatEuros(amount)}
-                    </span>
-                  </div>
-                ))}
-              </Card>
-            </div>
-          )}
+          {/* Dépenses imprévues — détail au tap (transactions sans dépense prévue). */}
+          <UnplannedSection categories={unplanned} />
         </section>
 
         {/* Crédits en cours (SPECS §7.1). */}

@@ -16,7 +16,7 @@ import type { Expense, MonthlySettings } from '@/types/database'
  */
 export default async function BudgetPage() {
   const supabase = await createClient()
-  const { activeMonth: month } = await getMonthContext()
+  const { activeMonth: month, activeStatus } = await getMonthContext()
   const prevMonth = previousMonthStart(month)
 
   const [expensesRes, budgetsRes, prevBudgetsRes, settingsRes, prevSettingsRes] =
@@ -82,6 +82,7 @@ export default async function BudgetPage() {
           savings: settings?.target_savings_pct ?? 20,
         }}
         prevHasData={prevHasData}
+        readOnly={activeStatus === 'closed'}
       />
     </>
   )

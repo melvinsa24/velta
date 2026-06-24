@@ -17,7 +17,7 @@ import { getMonthExpenseOptions } from '@/lib/data/expenseOptions'
 export default async function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const { activeMonth } = await getMonthContext()
+  const { activeMonth, activeStatus } = await getMonthContext()
   const expenseOptions = await getMonthExpenseOptions(activeMonth)
 
   return (
@@ -26,7 +26,7 @@ export default async function AppLayout({
       <div className="mx-auto w-full max-w-md flex-1 px-[18px] pt-[calc(3.5rem+18px)] pb-[100px]">
         {children}
       </div>
-      <Fab expenseOptions={expenseOptions} />
+      <Fab expenseOptions={expenseOptions} monthClosed={activeStatus === 'closed'} />
     </>
   )
 }

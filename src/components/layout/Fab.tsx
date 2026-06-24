@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -17,10 +17,35 @@ import {
  * écran. Les dépenses prévues du mois (pour le rattachement) sont fournies par
  * le layout — qui les recharge à chaque navigation (dette technique notée pour
  * la Phase 14 si les transitions iPhone deviennent lentes).
+ *
+ * Quand le mois actif est clôturé (`monthClosed`), la saisie est bloquée : un
+ * toast invite à rouvrir le mois dans Réglages, la modale ne s'ouvre pas.
  */
-export function Fab({ expenseOptions }: { expenseOptions: ExpenseOption[] }) {
+export function Fab({
+  expenseOptions,
+  monthClosed = false,
+}: {
+  expenseOptions: ExpenseOption[]
+  monthClosed?: boolean
+}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [toast, setToast] = useState(false)
+
+  // Toast auto-dismiss ~1,6 s (cf. design system : pilule --ink, texte blanc).
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => setToast(false), 1600)
+    return () => clearTimeout(timer)
+  }, [toast])
+
+  function handleClick() {
+    if (monthClosed) {
+      setToast(true)
+      return
+    }
+    setOpen(true)
+  }
 
   function handleDone() {
     setOpen(false)
@@ -32,7 +57,7 @@ export function Fab({ expenseOptions }: { expenseOptions: ExpenseOption[] }) {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={handleClick}
         aria-label="Ajouter une transaction"
         className={cn(
           'fixed bottom-8 right-[18px] z-40 flex h-16 w-16 items-center justify-center rounded-full',
@@ -42,6 +67,18 @@ export function Fab({ expenseOptions }: { expenseOptions: ExpenseOption[] }) {
       >
         <Plus size={28} aria-hidden="true" />
       </button>
+
+      {toast && (
+        <div
+          role="status"
+          className={cn(
+            'fixed inset-x-4 bottom-28 z-50 mx-auto max-w-xs rounded-full bg-ink',
+            'px-4 py-2.5 text-center text-sm text-white shadow-hero',
+          )}
+        >
+          Le mois est clôturé — rouvre-le dans Réglages pour saisir une transaction.
+        </div>
+      )}
 
       <Modal
         open={open}
