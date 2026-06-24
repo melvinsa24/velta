@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { currentMonthStart } from '@/lib/month'
 
 /*
  * Server Action propre à l'écran Réglages : enregistrement des objectifs %.
@@ -21,12 +20,13 @@ async function requireClient() {
 }
 
 export async function saveTargets(input: {
+  month: string
   needs: number
   wants: number
   savings: number
 }): Promise<ActionResult> {
   const supabase = await requireClient()
-  const month = currentMonthStart()
+  const { month } = input
   // Upsert sur la PK `month` : on ne touche qu'aux 3 cibles, les revenus
   // éventuels du mois restent intacts (les colonnes non fournies gardent leur
   // valeur existante / leur défaut à l'insertion).

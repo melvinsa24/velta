@@ -21,6 +21,7 @@ function parse(value: string): number {
  * que si le total fait exactement 100 %.
  */
 export function TargetsSection({
+  monthIso,
   monthLabel,
   settings,
 }: {
@@ -77,6 +78,7 @@ export function TargetsSection({
     if (!isHundred) return
     startTransition(async () => {
       const result = await saveTargets({
+        month: monthIso,
         needs: nums[0],
         wants: nums[1],
         savings: nums[2],

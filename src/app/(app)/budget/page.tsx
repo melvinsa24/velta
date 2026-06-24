@@ -1,10 +1,7 @@
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { createClient } from '@/lib/supabase/server'
-import {
-  currentMonthStart,
-  formatMonthLabel,
-  previousMonthStart,
-} from '@/lib/month'
+import { formatMonthLabel, previousMonthStart } from '@/lib/month'
+import { getMonthContext } from '@/lib/data/activeMonth'
 import { BudgetEditor } from './BudgetEditor'
 import type { BudgetLine } from './actions'
 import type { Expense, MonthlySettings } from '@/types/database'
@@ -19,7 +16,7 @@ import type { Expense, MonthlySettings } from '@/types/database'
  */
 export default async function BudgetPage() {
   const supabase = await createClient()
-  const month = currentMonthStart()
+  const { activeMonth: month } = await getMonthContext()
   const prevMonth = previousMonthStart(month)
 
   const [expensesRes, budgetsRes, prevBudgetsRes, settingsRes, prevSettingsRes] =

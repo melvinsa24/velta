@@ -2,8 +2,10 @@ import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Button, Card } from '@/components/ui'
 import { LogoutButton } from '@/app/logout-button'
 import { createClient } from '@/lib/supabase/server'
-import { currentMonthStart, formatMonthLabel } from '@/lib/month'
+import { formatMonthLabel } from '@/lib/month'
+import { getMonthContext } from '@/lib/data/activeMonth'
 import { TargetsSection } from './TargetsSection'
+import { MonthManagementSection } from './MonthManagementSection'
 import type { MonthlySettings } from '@/types/database'
 
 /*
@@ -15,7 +17,9 @@ import type { MonthlySettings } from '@/types/database'
  */
 export default async function ReglagesPage() {
   const supabase = await createClient()
-  const month = currentMonthStart()
+  const { activeMonth, activeStatus, isBehind, nextMonth, prevMonth, prevStatus } =
+    await getMonthContext()
+  const month = activeMonth
 
   const settingsRes = await supabase
     .from('monthly_settings')
@@ -34,6 +38,17 @@ export default async function ReglagesPage() {
           monthIso={month}
           monthLabel={formatMonthLabel(month)}
           settings={settings}
+        />
+
+        <MonthManagementSection
+          activeMonth={month}
+          activeLabel={formatMonthLabel(month)}
+          activeStatus={activeStatus}
+          nextLabel={formatMonthLabel(nextMonth)}
+          canNewMonth={isBehind}
+          prevMonth={prevMonth}
+          prevLabel={formatMonthLabel(prevMonth)}
+          prevClosed={prevStatus === 'closed'}
         />
 
         {/* Export CSV — placeholder (arrive en Phase 13) */}

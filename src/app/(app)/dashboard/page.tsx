@@ -3,8 +3,11 @@ import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Card } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { createClient } from '@/lib/supabase/server'
-import { currentMonthStart, formatMonthLabel } from '@/lib/month'
+import { formatMonthLabel } from '@/lib/month'
+import { getMonthContext } from '@/lib/data/activeMonth'
+import { getCreditsInProgress, type CreditRow } from '@/lib/data/credits'
 import { realTotalsByParent, revenusReelsMelvin } from '@/lib/calculs'
+import { MonthRolloverBanner } from './MonthRolloverBanner'
 import {
   CATEGORY_PARENT,
   CATEGORY_TYPE_LABELS,
@@ -51,10 +54,12 @@ function formatEuros(n: number): string {
 }
 
 export default async function DashboardPage() {
-  const month = currentMonthStart()
+  // Mois actif (plus grand mois in_progress, sinon calendaire) : l'app continue
+  // d'afficher ce mois tant qu'on n'a pas basculé, même si le calendrier a changé.
+  const { activeMonth: month, isBehind, nextMonth } = await getMonthContext()
   const supabase = await createClient()
 
-  const [settingsRes, txRes, budgetsRes] = await Promise.all([
+  const [settingsRes, txRes, budgetsRes, credits] = await Promise.all([
     supabase.from('monthly_settings').select('*').eq('month', month).maybeSingle(),
     supabase
       .from('transactions')
@@ -68,6 +73,8 @@ export default async function DashboardPage() {
       .select('planned_amount, expense_id, expenses!inner(label, color, category)')
       .eq('month', month)
       .eq('expenses.archived', false),
+    // Crédits en cours (is_credit + non archivés), mensualité = montant du mois actif.
+    getCreditsInProgress(month),
   ])
 
   const settings = settingsRes.data as MonthlySettings | null
@@ -140,6 +147,15 @@ export default async function DashboardPage() {
       <ScreenHeader title={formatMonthLabel(month)} />
 
       <div className="flex flex-col gap-6">
+        {/* Bannière de bascule : le mois actif est en retard sur le calendrier. */}
+        {isBehind && (
+          <MonthRolloverBanner
+            activeMonth={month}
+            activeLabel={formatMonthLabel(month)}
+            nextLabel={formatMonthLabel(nextMonth)}
+          />
+        )}
+
         {/* Carte héro — fond --ink (SPECS §7.1 / design system). */}
         <div className="rounded-card bg-card-ink p-[18px] shadow-hero">
           <p className="text-[11px] font-semibold tracking-[0.14em] text-white/45 uppercase">
@@ -262,6 +278,20 @@ export default async function DashboardPage() {
           )}
         </section>
 
+        {/* Crédits en cours (SPECS §7.1). */}
+        {credits.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-base font-bold tracking-tight text-ink">
+              Crédits en cours
+            </h2>
+            <Card className="flex flex-col gap-3">
+              {credits.map((credit) => (
+                <CreditLine key={credit.id} credit={credit} />
+              ))}
+            </Card>
+          </section>
+        )}
+
         {/* Note du mois (sauvegarde auto débouncée). */}
         <MonthNote month={month} initialNote={settings?.note ?? ''} />
       </div>
@@ -358,6 +388,32 @@ function ExpenseLine({
           ⚠ Dépassé de {formatEuros(real - planned)}
         </p>
       )}
+    </div>
+  )
+}
+
+/* Ligne d'un crédit en cours : pastille couleur, libellé + reste (mois / capital),
+ * mensualité du mois actif à droite. Capital / mois affichent « — » si non saisis. */
+function CreditLine({ credit }: { credit: CreditRow }) {
+  const { label, color, monthly, remainingMonths, totalRemaining } = credit
+  return (
+    <div className="flex items-center gap-2.5">
+      <span
+        className="h-2.5 w-2.5 shrink-0 rounded-card"
+        style={{ backgroundColor: color }}
+        aria-hidden="true"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm text-ink">{label}</p>
+        <p className="tabular text-xs text-ink-3">
+          {remainingMonths ?? '—'} mois restants · capital{' '}
+          {totalRemaining != null ? formatEuros(totalRemaining) : '—'}
+        </p>
+      </div>
+      <span className="tabular shrink-0 text-sm font-medium text-ink">
+        {formatEuros(monthly)}
+        <span className="text-ink-3">/mois</span>
+      </span>
     </div>
   )
 }

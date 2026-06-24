@@ -1,6 +1,6 @@
 import { AppHeader } from '@/components/layout/AppHeader'
 import { Fab } from '@/components/layout/Fab'
-import { currentMonthStart } from '@/lib/month'
+import { getMonthContext } from '@/lib/data/activeMonth'
 import { getMonthExpenseOptions } from '@/lib/data/expenseOptions'
 
 /*
@@ -17,7 +17,8 @@ import { getMonthExpenseOptions } from '@/lib/data/expenseOptions'
 export default async function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const expenseOptions = await getMonthExpenseOptions(currentMonthStart())
+  const { activeMonth } = await getMonthContext()
+  const expenseOptions = await getMonthExpenseOptions(activeMonth)
 
   return (
     <>

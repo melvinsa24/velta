@@ -135,6 +135,11 @@ export type TransactionUpdate = Partial<TransactionInsert>
 
 export interface MonthlySettings {
   month: string // date ISO (clé primaire), premier jour du mois
+  /**
+   * Statut du mois (migration 005, SPECS §7.2). Propriété du MOIS portée par
+   * `monthly_settings` (la colonne `monthly_budgets.status` est devenue vestigiale).
+   */
+  status: BudgetStatus
   /** Revenu prévisionnel du mois (saisi dans Budget), base des % du récap. */
   revenue_planned: number
   /** Revenu réel — salaire net perçu (saisi dans Historique > Revenus). */
@@ -151,6 +156,7 @@ export interface MonthlySettings {
 
 export interface MonthlySettingsInsert {
   month: string
+  status?: BudgetStatus
   revenue_planned?: number
   revenue_salaire?: number
   revenue_autres?: number
