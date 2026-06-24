@@ -17,7 +17,7 @@ import { createClient } from '@/lib/supabase/server'
 
 type ActionResult = { error: string | null }
 
-const REVALIDATE_PATHS = ['/historique', '/dashboard']
+const REVALIDATE_PATHS = ['/historique', '/dashboard', '/flore']
 
 async function requireClient() {
   const supabase = await createClient()
@@ -72,6 +72,30 @@ export async function upsertRevenuPlanned({
   const { error } = await supabase
     .from('monthly_settings')
     .upsert({ month, revenue_planned }, { onConflict: 'month' })
+  if (error) return { error: error.message }
+  revalidateAll()
+  return { error: null }
+}
+
+/*
+ * Inputs du mois saisis dans l'onglet Flore (SPECS §7.6) : APL brute et revenus
+ * de Flore. Toujours envoyés ensemble (sauvegarde au blur de l'un ou l'autre).
+ * L'APL alimente aussi Historique > Revenus (même colonne, même mois) ; la
+ * revalidation de /historique et /dashboard répercute le changement partout.
+ */
+export async function upsertFloreInputs({
+  month,
+  apl,
+  revenue_flore,
+}: {
+  month: string
+  apl: number | null
+  revenue_flore: number
+}): Promise<ActionResult> {
+  const supabase = await requireClient()
+  const { error } = await supabase
+    .from('monthly_settings')
+    .upsert({ month, apl, revenue_flore }, { onConflict: 'month' })
   if (error) return { error: error.message }
   revalidateAll()
   return { error: null }

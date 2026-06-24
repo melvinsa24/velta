@@ -5,7 +5,12 @@
  */
 
 import { CATEGORY_PARENT } from '@/lib/categoryMeta'
-import type { CategoryType, MonthlySettings, ParentType } from '@/types/database'
+import type {
+  CategoryType,
+  MonthlySettings,
+  ParentType,
+  ShareMode,
+} from '@/types/database'
 
 /** Sous-ensemble de `monthly_settings` nécessaire au revenu réel de Melvin. */
 export type RevenueSettings = Pick<
@@ -43,4 +48,52 @@ export function realTotalsByParent(
   const totals: Record<ParentType, number> = { besoin: 0, envie: 0, epargne: 0 }
   for (const t of transactions) totals[CATEGORY_PARENT[t.category]] += t.amount
   return totals
+}
+
+/** Ratio de répartition Melvin / Flore d'un mois (module Flore, SPECS §7.6). */
+export type FloreRatio = {
+  /** Revenu réel de Melvin (= revenusReelsMelvin), part APL incluse. */
+  revenusMelvin: number
+  ratioMelvin: number
+  ratioFlore: number
+}
+
+/**
+ * Ratio de répartition des charges entre Melvin et Flore (SPECS §7.6 / brief
+ * Phase 10a). Le revenu réel de Melvin (APL au prorata déjà incluse) est obtenu
+ * via `revenusReelsMelvin` — ce qui lève la circularité signalée dans le brief :
+ * l'APL est répartie en interne sur la base (salaire + autres), puis le ratio
+ * final est calculé avec cette part d'APL incluse.
+ *
+ *   ratio_melvin = revenusMelvin / (revenusMelvin + revenue_flore)
+ *   ratio_flore  = revenue_flore / (revenusMelvin + revenue_flore)
+ *
+ * Si Flore n'a aucun revenu, tout bascule en 100 % Melvin (SPECS §9.3) : ratio
+ * Flore nul. Aucune valeur dérivée n'est stockée (SPECS §9.1).
+ */
+export function floreRatio(settings: RevenueSettings): FloreRatio {
+  const revenusMelvin = revenusReelsMelvin(settings)
+  const total = revenusMelvin + settings.revenue_flore
+  if (total <= 0) return { revenusMelvin, ratioMelvin: 1, ratioFlore: 0 }
+  return {
+    revenusMelvin,
+    ratioMelvin: revenusMelvin / total,
+    ratioFlore: settings.revenue_flore / total,
+  }
+}
+
+/**
+ * Part revenant à Flore pour une dépense partagée (SPECS §7.6) :
+ *   - split_50_50   → moitié du montant prévu
+ *   - split_prorata → montant prévu × ratio_flore
+ *   - perso_100     → 0 (jamais partagée)
+ */
+export function floreShare(
+  plannedAmount: number,
+  shareMode: ShareMode,
+  ratioFlore: number,
+): number {
+  if (shareMode === 'split_50_50') return plannedAmount / 2
+  if (shareMode === 'split_prorata') return plannedAmount * ratioFlore
+  return 0
 }
