@@ -29,11 +29,18 @@ export default async function BudgetPage() {
         .select('*')
         .eq('archived', false)
         .order('created_at'),
+      // !inner + archived=false : n'expose que les budgets de dépenses non
+      // archivées (cohérent avec la liste `expenses` filtrée juste au-dessus).
       supabase
         .from('monthly_budgets')
-        .select('expense_id, planned_amount')
-        .eq('month', month),
-      supabase.from('monthly_budgets').select('expense_id').eq('month', prevMonth),
+        .select('expense_id, planned_amount, expenses!inner(archived)')
+        .eq('month', month)
+        .eq('expenses.archived', false),
+      supabase
+        .from('monthly_budgets')
+        .select('expense_id, expenses!inner(archived)')
+        .eq('month', prevMonth)
+        .eq('expenses.archived', false),
       supabase
         .from('monthly_settings')
         .select('*')

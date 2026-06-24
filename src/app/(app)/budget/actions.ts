@@ -66,10 +66,13 @@ export async function copyPreviousMonth(
   const supabase = await requireClient()
   const prev = previousMonthStart(month)
 
+  // !inner + archived=false : la reprise ne doit pas ressusciter le budget d'une
+  // dépense archivée (cohérent avec le workflow « nouveau mois », SPECS §7.2/§9.7).
   const { data, error: readError } = await supabase
     .from('monthly_budgets')
-    .select('expense_id, planned_amount')
+    .select('expense_id, planned_amount, expenses!inner(archived)')
     .eq('month', prev)
+    .eq('expenses.archived', false)
     .order('created_at')
 
   if (readError) return { error: readError.message, lines: [] }
