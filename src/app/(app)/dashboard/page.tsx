@@ -60,10 +60,14 @@ export default async function DashboardPage() {
       .from('transactions')
       .select('amount, expense_id, category')
       .eq('month', month),
+    // !inner + filtre archived=false : exclut les lignes dont la dépense est
+    // archivée (SPECS §7.3/§9.7) ; sans !inner, PostgREST garderait la ligne
+    // avec expenses=null au lieu de l'exclure.
     supabase
       .from('monthly_budgets')
-      .select('planned_amount, expense_id, expenses(label, color, category)')
-      .eq('month', month),
+      .select('planned_amount, expense_id, expenses!inner(label, color, category)')
+      .eq('month', month)
+      .eq('expenses.archived', false),
   ])
 
   const settings = settingsRes.data as MonthlySettings | null
