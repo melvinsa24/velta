@@ -77,25 +77,27 @@ Trois niveaux à bien distinguer :
 
 ### Navigation
 
-**Tab bar basse** (mobile), comportant 4 onglets + un bouton **+** central pour la saisie rapide d'une transaction. Détails visuels (verre dépoli, point lime sur l'onglet actif) dans `VELTA_DESIGN_SYSTEM.md`.
+**Header fixe + drawer latéral** (mobile). Le header (logo « Velta » centré, bouton burger à gauche) est présent sur tous les écrans applicatifs ; le burger ouvre un drawer de navigation qui glisse depuis la gauche. La saisie rapide d'une transaction se fait via un **bouton + flottant (FAB)** en bas à droite, accessible depuis n'importe quel écran. Détails visuels (barre lime sur l'onglet actif, FAB lime) dans `VELTA_DESIGN_SYSTEM.md`.
 
-**Structure de la tab bar :**
+**Liens du drawer :**
 
 | Position | Écran | Icône Lucide |
 |---|---|---|
 | 1 | Dashboard | `LayoutDashboard` |
 | 2 | Budget | `Wallet` |
-| 3 | **+** (saisie transaction) | `Plus` — bouton lime central |
+| 3 | Historique | `History` |
 | 4 | Flore | `Users` |
 | 5 | Réglages | `Settings` |
 
-**Écrans secondaires** (accessibles depuis les onglets principaux) : Transactions (depuis Dashboard), Simulateur (depuis Budget), Récap annuel (depuis Dashboard ou Réglages).
+**Saisie transaction** : bouton **+** flottant (FAB, `Plus`, lime), hors drawer — voir Layout mobile.
+
+**Écrans secondaires** (accessibles depuis les écrans principaux, pas dans le drawer) : Simulateur (depuis Budget), Récap annuel (depuis Dashboard ou Réglages).
 
 **Bibliothèque d'icônes : Lucide React** (`lucide-react`). Aucune autre bibliothèque d'icônes ne doit être utilisée.
 
 ### Layout mobile
 
-- Bouton **+** central de la tab bar : saisie rapide d'une transaction depuis n'importe quel écran.
+- Bouton **+** flottant (FAB) en bas à droite : saisie rapide d'une transaction depuis n'importe quel écran.
 - Marge d'écran : 18px (cf. design system).
 
 ---

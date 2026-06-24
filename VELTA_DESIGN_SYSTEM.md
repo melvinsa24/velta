@@ -112,7 +112,8 @@ extend: {
 - **Budget du mois** — carte blanche, montant tabulaire, jauge de progression **lime**, chip « % restant ».
 - **Catégories** — lignes avec icône carrée, mini-jauge `--ink`, montant à droite.
 - **Transactions** — liste groupée ; montants en `--ink`, positifs en `--up`.
-- **Tab bar** — verre dépoli, 4 onglets + bouton **+** central lime ; onglet actif = point lime sous le libellé.
+- **Header + drawer** — header fixe (bouton burger à gauche, logo « Velta » centré) ; le burger ouvre un drawer de navigation latéral, onglet actif marqué par une barre lime à gauche.
+- **FAB** — bouton **+** lime flottant en bas à droite (saisie rapide d'une transaction depuis n'importe quel écran).
 
 ## États & interactions
 - Hover boutons : translateY(-2px) + ombre douce.
