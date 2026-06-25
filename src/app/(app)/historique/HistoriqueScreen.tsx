@@ -56,6 +56,7 @@ export function HistoriqueScreen({
         />
       ) : (
         <RevenusPanel
+          key={month}
           month={month}
           revenueSalaire={revenus.revenue_salaire}
           revenueAutres={revenus.revenue_autres}

@@ -111,8 +111,11 @@ export default async function FlorePage({
       <div className="flex flex-col gap-6">
         <MonthSelector month={month} basePath="/flore" />
 
-        {/* Section 1 — Inputs du mois (sauvegarde au blur). */}
-        <FloreInputs month={month} apl={apl} revenueFlore={revenueFlore} />
+        {/* Section 1 — Inputs du mois (sauvegarde au blur). `key={month}` force le
+            remontage à chaque changement de mois : sans lui, l'état local des
+            champs (valeurs saisies) survivrait à la navigation et un blur
+            enregistrerait les valeurs du mois précédent sur le nouveau mois. */}
+        <FloreInputs key={month} month={month} apl={apl} revenueFlore={revenueFlore} />
 
         {!hasFlore ? (
           <Card className="py-4">
