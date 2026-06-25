@@ -52,33 +52,35 @@ export function realTotalsByParent(
 
 /** Ratio de répartition Melvin / Flore d'un mois (module Flore, SPECS §7.6). */
 export type FloreRatio = {
-  /** Revenu réel de Melvin (= revenusReelsMelvin), part APL incluse. */
-  revenusMelvin: number
   ratioMelvin: number
   ratioFlore: number
 }
 
 /**
  * Ratio de répartition des charges entre Melvin et Flore (SPECS §7.6 / brief
- * Phase 10a). Le revenu réel de Melvin (APL au prorata déjà incluse) est obtenu
- * via `revenusReelsMelvin` — ce qui lève la circularité signalée dans le brief :
- * l'APL est répartie en interne sur la base (salaire + autres), puis le ratio
- * final est calculé avec cette part d'APL incluse.
+ * Phase 10a). Calculé sur les revenus de BASE uniquement — APL EXCLUE :
  *
- *   ratio_melvin = revenusMelvin / (revenusMelvin + revenue_flore)
- *   ratio_flore  = revenue_flore / (revenusMelvin + revenue_flore)
+ *   base_melvin  = revenue_salaire + revenue_autres
+ *   base_flore   = revenue_flore
+ *   ratio_melvin = base_melvin / (base_melvin + base_flore)
+ *   ratio_flore  = base_flore  / (base_melvin + base_flore)
  *
- * Si Flore n'a aucun revenu, tout bascule en 100 % Melvin (SPECS §9.3) : ratio
- * Flore nul. Aucune valeur dérivée n'est stockée (SPECS §9.1).
+ * L'APL est elle-même répartie via ce ratio (part_apl = apl × ratio) : l'inclure
+ * dans la base créerait une circularité (l'APL entrerait dans le ratio qui sert
+ * à la répartir). `revenusReelsMelvin` (qui inclut la part APL de Melvin) reste
+ * réservée aux ratios besoins/envies/épargne, hors module Flore.
+ *
+ * Si la base totale est nulle, tout bascule en 100 % Melvin (SPECS §9.3).
+ * Aucune valeur dérivée n'est stockée (SPECS §9.1).
  */
 export function floreRatio(settings: RevenueSettings): FloreRatio {
-  const revenusMelvin = revenusReelsMelvin(settings)
-  const total = revenusMelvin + settings.revenue_flore
-  if (total <= 0) return { revenusMelvin, ratioMelvin: 1, ratioFlore: 0 }
+  const baseMelvin = settings.revenue_salaire + settings.revenue_autres
+  const baseFlore = settings.revenue_flore
+  const total = baseMelvin + baseFlore
+  if (total <= 0) return { ratioMelvin: 1, ratioFlore: 0 }
   return {
-    revenusMelvin,
-    ratioMelvin: revenusMelvin / total,
-    ratioFlore: settings.revenue_flore / total,
+    ratioMelvin: baseMelvin / total,
+    ratioFlore: baseFlore / total,
   }
 }
 
