@@ -6,7 +6,7 @@ import { Button, Input, Modal, ConfirmModal } from '@/components/ui'
 import {
   addProrataExpense,
   updateProrataExpense,
-  archiveExpense,
+  archiveProrataExpense,
 } from '@/lib/actions/expenses'
 
 /*
@@ -108,7 +108,7 @@ export function FloreProrataExpenses({
         message="Elle disparaît des mois suivants ; les transactions passées la conservent."
         confirmLabel="Supprimer"
         pendingLabel="Suppression…"
-        onConfirm={() => archiveExpense(deleting!.id)}
+        onConfirm={() => archiveProrataExpense(deleting!.id)}
       />
     </section>
   )

@@ -228,13 +228,15 @@ export default async function FlorePage({
           </>
         )}
 
-        {/* Dépenses au prorata (toujours visible : créées / gérées ici, brief 10c).
-            La part nette est recalculée à la volée depuis le total. */}
-        <FloreProrataExpenses lines={prorataLines} hasFlore={hasFlore} />
-
         {/* Section 5 — Remboursements (toujours visible, module isolé). `key`
             force le reset du formulaire/état au changement de mois. */}
         <FlorePayments key={month} payments={payments} totalDue={totalDue} />
+
+        {/* Dépenses au prorata (toujours visible : créées / gérées ici, brief 10c).
+            La part nette est recalculée à la volée depuis le total. `key={month}`
+            : remontage propre au changement de mois (cohérent avec les autres
+            sections liées au mois, évite un doublon de rendu après mutation). */}
+        <FloreProrataExpenses key={month} lines={prorataLines} hasFlore={hasFlore} />
       </div>
     </>
   )

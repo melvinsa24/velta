@@ -156,6 +156,23 @@ export async function archiveExpense(id: string): Promise<ActionResult> {
 // --- Dépenses au prorata (gérées depuis l'onglet Flore, brief Phase 10c) -----
 
 /*
+ * Archive une dépense au prorata depuis l'onglet Flore. Identique à
+ * `archiveExpense` mais revalide le même périmètre que add/update prorata
+ * (`/flore` inclus) : sans `/flore`, la suppression laissait l'écran dans un état
+ * de cache incohérent (item supprimé encore affiché + doublon de rendu).
+ */
+export async function archiveProrataExpense(id: string): Promise<ActionResult> {
+  const supabase = await requireClient()
+  const { error } = await supabase
+    .from('expenses')
+    .update({ archived: true })
+    .eq('id', id)
+  if (error) return { error: error.message }
+  for (const path of PRORATA_REVALIDATE_PATHS) revalidatePath(path)
+  return { error: null }
+}
+
+/*
  * Part nette de Melvin pour une charge au prorata (SPECS §7.6) : total × ratio
  * Melvin. On réutilise `floreRatio` (APL exclue de la base, pour rester cohérent
  * avec le reste du module Flore et éviter la circularité). Si Flore n'a aucun

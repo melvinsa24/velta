@@ -290,7 +290,6 @@ export function BudgetEditor({
                             key={expense.id}
                             expense={expense}
                             net={prorataNet(expense)}
-                            ratioMelvin={ratioMelvin}
                             hasFlore={revenueFlore > 0}
                             isFirst={index === 0}
                           />
@@ -461,32 +460,24 @@ function ExpenseRow({
   )
 }
 
-/* Dépense au prorata dans le budget (brief 10c) : montant non éditable inline,
- * géré depuis l'onglet Flore. Affiche la part nette (ou le total si Flore non
- * renseigné), une sous-ligne détaillée et un renvoi vers l'onglet Flore. */
+/* Dépense au prorata dans le budget (brief 10c) : montant non éditable inline
+ * (géré depuis l'onglet Flore), sans aucun sous-label. Affiche la part nette —
+ * ou le total si Flore n'a pas de revenu, « — » si le total n'est pas renseigné.
+ * Le détail (total, part Flore) reste visible uniquement dans l'onglet Flore. */
 function ProrataExpenseRow({
   expense,
   net,
-  ratioMelvin,
   hasFlore,
   isFirst,
 }: {
   expense: Expense
   net: number
-  ratioMelvin: number
   hasFlore: boolean
   isFirst: boolean
 }) {
   const total = expense.prorata_total_amount
-  const hasTotal = total !== null
-  const floreShare = hasTotal ? total * (1 - ratioMelvin) : 0
-
-  const value = !hasTotal ? '—' : hasFlore ? formatEuros(net) : formatEuros(total)
-  const sub = !hasTotal
-    ? 'Montant total à renseigner'
-    : hasFlore
-      ? `Total : ${formatEuros(total)} · Part Flore : ${formatEuros(floreShare)}`
-      : '100 % à votre charge'
+  const value =
+    total === null ? '—' : hasFlore ? formatEuros(net) : formatEuros(total)
 
   return (
     <div
@@ -500,12 +491,9 @@ function ProrataExpenseRow({
         style={{ backgroundColor: expense.color }}
         aria-hidden="true"
       />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm text-ink">{expense.label}</span>
-        <span className="truncate text-xs text-ink-3">
-          {sub} · Géré depuis l&apos;onglet Flore
-        </span>
-      </div>
+      <span className="min-w-0 flex-1 truncate text-sm text-ink">
+        {expense.label}
+      </span>
       <span className="tabular shrink-0 text-sm font-medium text-ink">
         {value}
       </span>
