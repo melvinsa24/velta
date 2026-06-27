@@ -46,6 +46,8 @@ export interface Expense {
   category: CategoryType
   color: string
   share_mode: ShareMode
+  /** Total de la charge partagée (renseigné uniquement si share_mode = 'split_prorata'). */
+  prorata_total_amount: number | null
   is_credit: boolean
   credit_remaining_months: number | null
   credit_end_date: string | null // date ISO (YYYY-MM-DD)
@@ -63,6 +65,7 @@ export interface ExpenseInsert {
   category: CategoryType
   color: string
   share_mode?: ShareMode
+  prorata_total_amount?: number | null
   is_credit?: boolean
   credit_remaining_months?: number | null
   credit_end_date?: string | null

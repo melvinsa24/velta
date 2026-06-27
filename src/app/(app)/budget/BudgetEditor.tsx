@@ -32,6 +32,10 @@ type Props = {
   prevHasData: boolean
   /** Mois clôturé : montants en lecture seule, mutations désactivées (Phase 9). */
   readOnly?: boolean
+  /** Revenus de Flore du mois (0 = charges prorata 100 % à charge de Melvin). */
+  revenueFlore: number
+  /** Part Melvin du ratio de répartition (pour la part nette des dépenses prorata). */
+  ratioMelvin: number
 }
 
 /* Cible d'objectif % par parent_type. */
@@ -77,6 +81,8 @@ export function BudgetEditor({
   targets,
   prevHasData,
   readOnly = false,
+  revenueFlore,
+  ratioMelvin,
 }: Props) {
   const router = useRouter()
 
@@ -159,12 +165,21 @@ export function BudgetEditor({
 
   const amountOf = (expenseId: string) => amounts[expenseId] ?? ''
 
+  // Part nette de Melvin pour une dépense au prorata (recalcul à la volée depuis
+  // le total). Si Flore n'a aucun revenu, ratioMelvin vaut 1 → la part = le total.
+  const prorataNet = (expense: Expense) =>
+    (expense.prorata_total_amount ?? 0) * ratioMelvin
+
+  // Montant compté dans les totaux : part nette pour les prorata, sinon la saisie.
+  const amountValueOf = (expense: Expense) =>
+    expense.share_mode === 'split_prorata'
+      ? prorataNet(expense)
+      : parseAmount(amountOf(expense.id))
+
   const parentTotal = (parent: ParentType) =>
     expenses.reduce(
       (sum, e) =>
-        CATEGORY_PARENT[e.category] === parent
-          ? sum + parseAmount(amountOf(e.id))
-          : sum,
+        CATEGORY_PARENT[e.category] === parent ? sum + amountValueOf(e) : sum,
       0,
     )
 
@@ -269,20 +284,31 @@ export function BudgetEditor({
                       </p>
                     )}
                     <Card className="p-0">
-                      {items.map((expense, index) => (
-                        <ExpenseRow
-                          key={expense.id}
-                          expense={expense}
-                          amount={amountOf(expense.id)}
-                          isFirst={index === 0}
-                          readOnly={readOnly}
-                          onEdit={() => setModal({ mode: 'edit', expense })}
-                          onAmountChange={(v) =>
-                            handleAmountChange(expense.id, v)
-                          }
-                          onAmountBlur={(v) => flushAmount(expense.id, v)}
-                        />
-                      ))}
+                      {items.map((expense, index) =>
+                        expense.share_mode === 'split_prorata' ? (
+                          <ProrataExpenseRow
+                            key={expense.id}
+                            expense={expense}
+                            net={prorataNet(expense)}
+                            ratioMelvin={ratioMelvin}
+                            hasFlore={revenueFlore > 0}
+                            isFirst={index === 0}
+                          />
+                        ) : (
+                          <ExpenseRow
+                            key={expense.id}
+                            expense={expense}
+                            amount={amountOf(expense.id)}
+                            isFirst={index === 0}
+                            readOnly={readOnly}
+                            onEdit={() => setModal({ mode: 'edit', expense })}
+                            onAmountChange={(v) =>
+                              handleAmountChange(expense.id, v)
+                            }
+                            onAmountBlur={(v) => flushAmount(expense.id, v)}
+                          />
+                        ),
+                      )}
                     </Card>
                   </div>
                 )
@@ -430,6 +456,58 @@ function ExpenseRow({
       />
       <span className="w-3 text-sm text-ink-3" aria-hidden="true">
         €
+      </span>
+    </div>
+  )
+}
+
+/* Dépense au prorata dans le budget (brief 10c) : montant non éditable inline,
+ * géré depuis l'onglet Flore. Affiche la part nette (ou le total si Flore non
+ * renseigné), une sous-ligne détaillée et un renvoi vers l'onglet Flore. */
+function ProrataExpenseRow({
+  expense,
+  net,
+  ratioMelvin,
+  hasFlore,
+  isFirst,
+}: {
+  expense: Expense
+  net: number
+  ratioMelvin: number
+  hasFlore: boolean
+  isFirst: boolean
+}) {
+  const total = expense.prorata_total_amount
+  const hasTotal = total !== null
+  const floreShare = hasTotal ? total * (1 - ratioMelvin) : 0
+
+  const value = !hasTotal ? '—' : hasFlore ? formatEuros(net) : formatEuros(total)
+  const sub = !hasTotal
+    ? 'Montant total à renseigner'
+    : hasFlore
+      ? `Total : ${formatEuros(total)} · Part Flore : ${formatEuros(floreShare)}`
+      : '100 % à votre charge'
+
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-2 px-[18px] py-2',
+        !isFirst && 'border-t border-border',
+      )}
+    >
+      <span
+        className="h-2.5 w-2.5 shrink-0 rounded-card"
+        style={{ backgroundColor: expense.color }}
+        aria-hidden="true"
+      />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-sm text-ink">{expense.label}</span>
+        <span className="truncate text-xs text-ink-3">
+          {sub} · Géré depuis l&apos;onglet Flore
+        </span>
+      </div>
+      <span className="tabular shrink-0 text-sm font-medium text-ink">
+        {value}
       </span>
     </div>
   )

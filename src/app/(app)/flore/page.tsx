@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getMonthContext } from '@/lib/data/activeMonth'
 import { floreRatio, floreShare } from '@/lib/calculs'
 import { FloreInputs } from './FloreInputs'
+import { FloreProrataExpenses } from './FloreProrataExpenses'
 import { FlorePayments } from './FlorePayments'
 import type { FlorePayment, MonthlySettings, ShareMode } from '@/types/database'
 
@@ -59,16 +60,24 @@ export default async function FlorePage({
 
   const supabase = await createClient()
 
-  const [settingsRes, budgetsRes, paymentsRes] = await Promise.all([
+  const [settingsRes, budgetsRes, prorataRes, paymentsRes] = await Promise.all([
     supabase.from('monthly_settings').select('*').eq('month', month).maybeSingle(),
-    // Dépenses partagées non archivées du mois. !inner + filtres sur la jointure :
+    // Charges 50/50 non archivées du mois. !inner + filtres sur la jointure :
     // PostgREST exclut bien les lignes hors critères (sinon expenses=null gardé).
+    // Les prorata sont désormais gérées dans leur propre section (brief 10c).
     supabase
       .from('monthly_budgets')
       .select('planned_amount, expense_id, expenses!inner(label, color, share_mode)')
       .eq('month', month)
       .eq('expenses.archived', false)
-      .in('expenses.share_mode', ['split_50_50', 'split_prorata']),
+      .eq('expenses.share_mode', 'split_50_50'),
+    // Dépenses au prorata (entités durables) : le total est porté par la dépense.
+    supabase
+      .from('expenses')
+      .select('id, label, prorata_total_amount')
+      .eq('share_mode', 'split_prorata')
+      .eq('archived', false)
+      .order('created_at'),
     // Remboursements du mois (module isolé, SPECS §9.2), triés du plus récent.
     supabase
       .from('flore_payments')
@@ -79,6 +88,12 @@ export default async function FlorePage({
 
   const settings = settingsRes.data as MonthlySettings | null
   const budgets = (budgetsRes.data as SharedBudgetRow[] | null) ?? []
+  const prorataExpenses =
+    (prorataRes.data as {
+      id: string
+      label: string
+      prorata_total_amount: number | null
+    }[] | null) ?? []
   const payments = (paymentsRes.data as FlorePayment[] | null) ?? []
 
   const revenueFlore = settings?.revenue_flore ?? 0
@@ -92,7 +107,7 @@ export default async function FlorePage({
     revenue_flore: revenueFlore,
   })
 
-  // Parts par dépense partagée (uniquement si Flore a un revenu).
+  // Charges 50/50 : part de Flore = moitié du montant prévu.
   const lines = budgets
     .filter((b) => b.expenses)
     .map((b) => {
@@ -108,7 +123,23 @@ export default async function FlorePage({
       }
     })
 
-  const totalCharges = lines.reduce((sum, l) => sum + l.floreShare, 0)
+  // Charges au prorata : base = total porté par la dépense (et non planned_amount,
+  // qui ne stocke que la part nette). Part de Flore = total × ratioFlore.
+  const prorataLines = prorataExpenses.map((e) => {
+    const total = e.prorata_total_amount ?? 0
+    const flore = total * ratio.ratioFlore
+    return {
+      id: e.id,
+      label: e.label,
+      total: e.prorata_total_amount, // null = total non renseigné (legacy)
+      floreShare: flore,
+      melvinShare: total - flore,
+    }
+  })
+
+  const totalCharges =
+    lines.reduce((sum, l) => sum + l.floreShare, 0) +
+    prorataLines.reduce((sum, l) => sum + l.floreShare, 0)
   const aplFlore = (apl ?? 0) * ratio.ratioFlore
   const totalDue = totalCharges - aplFlore
 
@@ -196,6 +227,10 @@ export default async function FlorePage({
             </div>
           </>
         )}
+
+        {/* Dépenses au prorata (toujours visible : créées / gérées ici, brief 10c).
+            La part nette est recalculée à la volée depuis le total. */}
+        <FloreProrataExpenses lines={prorataLines} hasFlore={hasFlore} />
 
         {/* Section 5 — Remboursements (toujours visible, module isolé). `key`
             force le reset du formulaire/état au changement de mois. */}

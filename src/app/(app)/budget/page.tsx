@@ -2,6 +2,7 @@ import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { createClient } from '@/lib/supabase/server'
 import { formatMonthLabel, previousMonthStart } from '@/lib/month'
 import { getMonthContext } from '@/lib/data/activeMonth'
+import { floreRatio } from '@/lib/calculs'
 import { BudgetEditor } from './BudgetEditor'
 import type { BudgetLine } from './actions'
 import type { Expense, MonthlySettings } from '@/types/database'
@@ -65,6 +66,16 @@ export default async function BudgetPage() {
   const currentPlanned = settings?.revenue_planned ?? 0
   const revenuePlanned = currentPlanned > 0 ? currentPlanned : prevPlanned
 
+  // Ratio de répartition du mois (mêmes règles que l'onglet Flore) : sert à
+  // afficher la part nette des dépenses au prorata, recalculée à la volée.
+  const revenueFlore = settings?.revenue_flore ?? 0
+  const ratioMelvin = floreRatio({
+    apl: settings?.apl ?? null,
+    revenue_salaire: settings?.revenue_salaire ?? 0,
+    revenue_autres: settings?.revenue_autres ?? 0,
+    revenue_flore: revenueFlore,
+  }).ratioMelvin
+
   return (
     <>
       <ScreenHeader
@@ -83,6 +94,8 @@ export default async function BudgetPage() {
         }}
         prevHasData={prevHasData}
         readOnly={activeStatus === 'closed'}
+        revenueFlore={revenueFlore}
+        ratioMelvin={ratioMelvin}
       />
     </>
   )

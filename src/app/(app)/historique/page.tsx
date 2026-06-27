@@ -28,7 +28,7 @@ export default async function HistoriquePage({
   const [txRes, expenseOptions, settingsRes] = await Promise.all([
     supabase
       .from('transactions')
-      .select('*, expenses(label, color)')
+      .select('*, expenses(label, color, prorata_total_amount, share_mode)')
       .eq('month', month)
       .order('date', { ascending: false })
       .order('created_at', { ascending: false }),

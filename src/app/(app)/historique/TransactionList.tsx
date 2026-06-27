@@ -17,11 +17,21 @@ import {
   TransactionForm,
   type ExpenseOption,
 } from '@/components/transaction/TransactionForm'
-import type { CategoryType, ParentType, Transaction } from '@/types/database'
+import type {
+  CategoryType,
+  ParentType,
+  ShareMode,
+  Transaction,
+} from '@/types/database'
 
 /* Transaction enrichie de la dépense liée (jointure) pour l'affichage. */
 export type TransactionRow = Transaction & {
-  expenses: { label: string; color: string } | null
+  expenses: {
+    label: string
+    color: string
+    prorata_total_amount: number | null
+    share_mode: ShareMode
+  } | null
 }
 
 /* Couleur neutre des transactions imprévues (sans dépense) — token --ink-3. */
@@ -223,6 +233,12 @@ function TransactionItem({
     tx.description?.trim() || expenseLabel || CATEGORY_TYPE_LABELS[tx.category]
   // Nom de dépense en sous-label discret seulement s'il n'est pas déjà le titre.
   const showExpenseSub = expenseLabel !== null && tx.description?.trim()
+  // Dépense au prorata : on rappelle le total de la charge (le montant saisi est
+  // la part nette réellement payée par Melvin, brief 10c).
+  const prorataTotal =
+    tx.expenses?.share_mode === 'split_prorata'
+      ? tx.expenses.prorata_total_amount
+      : null
 
   return (
     <button
@@ -248,6 +264,14 @@ function TransactionItem({
             <>
               {' · '}
               {expenseLabel}
+            </>
+          )}
+          {prorataTotal !== null && (
+            <>
+              {' · '}
+              <span className="tabular">
+                Montant total : {formatEuros(prorataTotal)}
+              </span>
             </>
           )}
         </span>

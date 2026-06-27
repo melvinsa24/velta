@@ -88,6 +88,14 @@ export function ExpenseForm({
       )
     : CATEGORY_TYPE_OPTIONS
 
+  // Le mode prorata est désormais géré depuis l'onglet Flore (brief 10c) : on le
+  // retire de la modale classique. On le garde uniquement si la dépense éditée
+  // est déjà en prorata (donnée legacy) pour ne pas casser son édition.
+  const shareModeOptions = SHARE_MODE_OPTIONS.filter(
+    (o) =>
+      o.value !== 'split_prorata' || initial?.share_mode === 'split_prorata',
+  )
+
   const [label, setLabel] = useState(initial?.label ?? '')
   const [category, setCategory] = useState<CategoryType>(
     initial?.category ?? categoryOptions[0]?.value ?? 'besoins_fixes',
@@ -139,6 +147,8 @@ export function ExpenseForm({
       category,
       color,
       share_mode: shareMode,
+      // Géré via l'onglet Flore ; conservé tel quel pour une dépense prorata legacy.
+      prorata_total_amount: initial?.prorata_total_amount ?? null,
       is_credit: isCredit,
       credit_remaining_months: months ? parseInt(months, 10) : null,
       credit_end_date: endDate || null,
@@ -205,7 +215,7 @@ export function ExpenseForm({
           value={shareMode}
           onChange={(e) => setShareMode(e.target.value as ShareMode)}
         >
-          {SHARE_MODE_OPTIONS.map((opt) => (
+          {shareModeOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>

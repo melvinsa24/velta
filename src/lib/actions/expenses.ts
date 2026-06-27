@@ -2,7 +2,10 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import type { CategoryType, Expense, ShareMode } from '@/types/database'
+import { getMonthContext } from '@/lib/data/activeMonth'
+import { floreRatio, type RevenueSettings } from '@/lib/calculs'
+import { CATEGORY_COLORS } from '@/lib/categoryMeta'
+import type { CategoryType, Expense, MonthlySettings, ShareMode } from '@/types/database'
 
 /*
  * Server Actions du CRUD « Dépense » (table `expenses`), utilisées par l'écran
@@ -21,6 +24,8 @@ export type ExpenseFormInput = {
   category: CategoryType
   color: string
   share_mode: ShareMode
+  /** Total de la charge partagée — uniquement pour les dépenses split_prorata. */
+  prorata_total_amount: number | null
   is_credit: boolean
   credit_remaining_months: number | null
   credit_end_date: string | null
@@ -30,6 +35,9 @@ export type ExpenseFormInput = {
 type ActionResult = { error: string | null }
 
 const REVALIDATE_PATHS = ['/budget', '/reglages']
+// Les dépenses prorata sont saisies depuis Flore et impactent le budget + le
+// dashboard (via leur part nette dans monthly_budgets) : on revalide plus large.
+const PRORATA_REVALIDATE_PATHS = ['/flore', '/budget', '/dashboard', '/reglages']
 
 async function requireClient() {
   const supabase = await createClient()
@@ -70,6 +78,9 @@ function expenseColumns(input: ExpenseFormInput) {
     category: input.category,
     color: input.color,
     share_mode: input.share_mode,
+    // Total conservé seulement pour les prorata, sinon null (pas de donnée orpheline).
+    prorata_total_amount:
+      input.share_mode === 'split_prorata' ? input.prorata_total_amount : null,
     is_credit: input.is_credit,
     ...creditFields(input),
   }
@@ -139,5 +150,123 @@ export async function archiveExpense(id: string): Promise<ActionResult> {
     .eq('id', id)
   if (error) return { error: error.message }
   revalidateAll()
+  return { error: null }
+}
+
+// --- Dépenses au prorata (gérées depuis l'onglet Flore, brief Phase 10c) -----
+
+/*
+ * Part nette de Melvin pour une charge au prorata (SPECS §7.6) : total × ratio
+ * Melvin. On réutilise `floreRatio` (APL exclue de la base, pour rester cohérent
+ * avec le reste du module Flore et éviter la circularité). Si Flore n'a aucun
+ * revenu, le ratio vaut 1 → la part nette redevient le total (SPECS §9.3).
+ * Calcul à la volée (SPECS §9.1) ; seul ce snapshot atterrit dans monthly_budgets.
+ */
+function prorataNetMelvin(total: number, settings: RevenueSettings): number {
+  return total * floreRatio(settings).ratioMelvin
+}
+
+/* Réglages revenus du mois actif (défauts à 0 si aucune ligne). */
+async function activeRevenueSettings(
+  supabase: Awaited<ReturnType<typeof requireClient>>,
+  month: string,
+): Promise<RevenueSettings> {
+  const { data } = await supabase
+    .from('monthly_settings')
+    .select('apl, revenue_salaire, revenue_autres, revenue_flore')
+    .eq('month', month)
+    .maybeSingle()
+  const s = data as Pick<
+    MonthlySettings,
+    'apl' | 'revenue_salaire' | 'revenue_autres' | 'revenue_flore'
+  > | null
+  return {
+    apl: s?.apl ?? null,
+    revenue_salaire: s?.revenue_salaire ?? 0,
+    revenue_autres: s?.revenue_autres ?? 0,
+    revenue_flore: s?.revenue_flore ?? 0,
+  }
+}
+
+/*
+ * Crée une dépense au prorata depuis Flore : toujours `besoins_fixes` /
+ * `split_prorata`, couleur par défaut. La ligne monthly_budgets du mois actif
+ * reçoit la part nette de Melvin (snapshot) — elle se comporte ensuite comme une
+ * besoins_fixes normale (dashboard, reconduction roll_to_next_month).
+ */
+export async function addProrataExpense(input: {
+  label: string
+  prorata_total_amount: number
+}): Promise<ActionResult> {
+  const supabase = await requireClient()
+  const { activeMonth } = await getMonthContext()
+  const settings = await activeRevenueSettings(supabase, activeMonth)
+
+  const { data, error } = await supabase
+    .from('expenses')
+    .insert({
+      label: input.label.trim(),
+      description: null,
+      category: 'besoins_fixes',
+      color: CATEGORY_COLORS[0],
+      share_mode: 'split_prorata',
+      prorata_total_amount: input.prorata_total_amount,
+      is_credit: false,
+      archived: false,
+    })
+    .select('id')
+    .single()
+
+  if (error || !data) return { error: error?.message ?? 'Échec' }
+
+  const expense = data as Pick<Expense, 'id'>
+  const planned = prorataNetMelvin(input.prorata_total_amount, settings)
+
+  const { error: budgetError } = await supabase
+    .from('monthly_budgets')
+    .insert({ month: activeMonth, expense_id: expense.id, planned_amount: planned })
+
+  if (budgetError) return { error: budgetError.message }
+
+  for (const path of PRORATA_REVALIDATE_PATHS) revalidatePath(path)
+  return { error: null }
+}
+
+/*
+ * Met à jour une dépense au prorata (libellé + total). Rafraîchit aussi la part
+ * nette du MOIS ACTIF uniquement (les mois passés ne sont jamais modifiés,
+ * SPECS §9). Le budget du mois actif est upserté pour rester cohérent avec le
+ * dashboard si une ligne existe déjà ; sinon on la crée.
+ */
+export async function updateProrataExpense(input: {
+  id: string
+  label: string
+  prorata_total_amount: number
+}): Promise<ActionResult> {
+  const supabase = await requireClient()
+  const { activeMonth } = await getMonthContext()
+  const settings = await activeRevenueSettings(supabase, activeMonth)
+
+  const { error } = await supabase
+    .from('expenses')
+    .update({
+      label: input.label.trim(),
+      prorata_total_amount: input.prorata_total_amount,
+    })
+    .eq('id', input.id)
+
+  if (error) return { error: error.message }
+
+  const planned = prorataNetMelvin(input.prorata_total_amount, settings)
+  const { error: budgetError } = await supabase
+    .from('monthly_budgets')
+    .upsert(
+      { month: activeMonth, expense_id: input.id, planned_amount: planned },
+      { onConflict: 'month,expense_id' },
+    )
+
+  if (budgetError) return { error: budgetError.message }
+
+  for (const path of PRORATA_REVALIDATE_PATHS) revalidatePath(path)
   return { error: null }
 }
