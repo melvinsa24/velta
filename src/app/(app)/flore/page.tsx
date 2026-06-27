@@ -112,6 +112,12 @@ export default async function FlorePage({
   const aplFlore = (apl ?? 0) * ratio.ratioFlore
   const totalDue = totalCharges - aplFlore
 
+  // Solde restant réel = dette théorique − remboursements du mois (10b-fix).
+  // `totalDue` reste la référence des charges ; seul l'affichage héro change.
+  const totalRembourse = payments.reduce((sum, p) => sum + p.amount, 0)
+  const soldeRestant = Math.max(0, totalDue - totalRembourse)
+  const apure = soldeRestant === 0
+
   return (
     <>
       <ScreenHeader title="Flore" subtitle="Répartition des charges" />
@@ -167,17 +173,26 @@ export default async function FlorePage({
               )}
             </section>
 
-            {/* Section 4 — Carte héro « Flore me doit ». */}
+            {/* Section 4 — Carte héro : solde restant réel (dette − remboursements). */}
             <div className="rounded-card bg-card-ink p-[18px] shadow-hero">
-              <p className="text-[11px] font-semibold tracking-[0.14em] text-white/45 uppercase">
-                Flore me doit
+              <p
+                className={`text-[11px] font-semibold tracking-[0.14em] uppercase ${
+                  apure ? 'text-up' : 'text-white/45'
+                }`}
+              >
+                {apure ? 'Solde apuré' : 'Flore me doit'}
               </p>
               <p className="tabular mt-2 text-[40px] leading-[44px] font-bold tracking-[-0.035em] text-white">
-                {formatEuros(totalDue)}
+                {formatEuros(soldeRestant)}
               </p>
               <p className="tabular mt-1.5 text-sm text-white/55">
                 Charges {formatEuros(totalCharges)} − APL {formatEuros(aplFlore)}
               </p>
+              {totalRembourse > 0 && (
+                <p className="tabular mt-0.5 text-sm text-white/55">
+                  Dont {formatEuros(totalRembourse)} déjà remboursé
+                </p>
+              )}
             </div>
           </>
         )}
