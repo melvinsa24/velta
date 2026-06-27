@@ -60,7 +60,8 @@ export function Fab({
         onClick={handleClick}
         aria-label="Ajouter une transaction"
         className={cn(
-          'fixed bottom-8 right-[18px] z-40 flex h-16 w-16 items-center justify-center rounded-full',
+          // bottom = 32px + home indicator iOS (safe area, PWA standalone).
+          'fixed bottom-[calc(2rem+env(safe-area-inset-bottom))] right-[18px] z-40 flex h-16 w-16 items-center justify-center rounded-full',
           'bg-accent text-accent-ink shadow-accent',
           'transition-transform duration-150 hover:-translate-y-0.5 active:bg-accent-press',
         )}

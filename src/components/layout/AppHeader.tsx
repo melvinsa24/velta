@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -73,6 +73,12 @@ export function AppHeader() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
 
+  // Miroir de `open` lisible dans les handlers de geste (attachés une seule fois).
+  const openRef = useRef(open)
+  useEffect(() => {
+    openRef.current = open
+  }, [open])
+
   // Empêche le scroll de l'arrière-plan tant que le drawer est ouvert + Échap.
   useEffect(() => {
     if (!open) return
@@ -87,15 +93,77 @@ export function AppHeader() {
     }
   }, [open])
 
+  /*
+   * Geste de swipe horizontal pour ouvrir / fermer le drawer (SPECS — navigation
+   * mobile). Listeners posés sur `window` une seule fois : AppHeader est monté
+   * par le layout (app) sur tous les écrans, donc le geste marche partout, et il
+   * pilote exactement le même état `open` (pas de second système).
+   *
+   * Détection au touchend (pas de preventDefault, listeners passifs) → n'interfère
+   * ni avec le scroll vertical ni avec le swipe-retour natif d'iOS. Pour l'ouverture
+   * on ignore les gestes partant des 20 premiers px (zone du retour iOS).
+   */
+  useEffect(() => {
+    const EDGE = 20 // marge gauche réservée au swipe-retour iOS (ouverture)
+    const DIST = 60 // déplacement horizontal minimal (px)
+    const VELOCITY = 0.5 // ou vitesse suffisante (px/ms)
+    let startX = 0
+    let startY = 0
+    let startT = 0
+    let tracking = false
+
+    function onStart(e: TouchEvent) {
+      if (e.touches.length !== 1) {
+        tracking = false
+        return
+      }
+      const t = e.touches[0]
+      startX = t.clientX
+      startY = t.clientY
+      startT = e.timeStamp
+      tracking = true
+    }
+
+    function onEnd(e: TouchEvent) {
+      if (!tracking) return
+      tracking = false
+      const t = e.changedTouches[0]
+      if (!t) return
+      const dx = t.clientX - startX
+      const dy = t.clientY - startY
+      const dt = e.timeStamp - startT || 1
+      // Geste vertical dominant → c'est un scroll, on ignore.
+      if (Math.abs(dx) <= Math.abs(dy)) return
+      const fast = Math.abs(dx) / dt >= VELOCITY
+      if (Math.abs(dx) < DIST && !fast) return
+
+      if (dx > 0 && !openRef.current) {
+        if (startX < EDGE) return // ne pas marcher sur le swipe-retour iOS
+        setOpen(true)
+      } else if (dx < 0 && openRef.current) {
+        setOpen(false)
+      }
+    }
+
+    window.addEventListener('touchstart', onStart, { passive: true })
+    window.addEventListener('touchend', onEnd, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', onStart)
+      window.removeEventListener('touchend', onEnd)
+    }
+  }, [])
+
   return (
     <>
       {/* Header fixe */}
       <header
         className={cn(
-          'fixed inset-x-0 top-0 z-30 h-14 border-b border-border bg-surface',
+          // pt safe-area : le fond du header s'étend sous l'encoche iOS (statut
+          // black-translucent), la barre interne (h-14) reste sous l'encoche.
+          'fixed inset-x-0 top-0 z-30 border-b border-border bg-surface pt-[env(safe-area-inset-top)]',
         )}
       >
-        <div className="relative mx-auto flex h-full max-w-md items-center px-[18px]">
+        <div className="relative mx-auto flex h-14 max-w-md items-center px-[18px]">
           <button
             type="button"
             onClick={() => setOpen(true)}
@@ -128,6 +196,8 @@ export function AppHeader() {
         aria-hidden={!open}
         className={cn(
           'fixed inset-y-0 left-0 z-50 flex w-[72%] max-w-[280px] flex-col bg-surface',
+          // Safe areas : contenu du drawer sous l'encoche et au-dessus du home indicator.
+          'pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]',
           'transition-transform duration-300 ease-in-out',
           open ? 'translate-x-0' : '-translate-x-full',
         )}

@@ -4,6 +4,24 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Velta",
   description: "Dashboard financier personnel",
+  // PWA : manifest + comportement « app » au lancement depuis l'écran d'accueil.
+  manifest: "/manifest.json",
+  appleWebApp: {
+    title: "Velta",
+    // black-translucent : la barre d'état iOS recouvre le haut → géré par les
+    // safe areas (env(safe-area-inset-top)) sur le header.
+    statusBarStyle: "black-translucent",
+  },
+  // Next 16 émet `mobile-web-app-capable` via appleWebApp ; on ajoute le legacy
+  // `apple-mobile-web-app-capable` pour les anciennes versions d'iOS Safari.
+  other: { "apple-mobile-web-app-capable": "yes" },
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 // Mobile-first : largeur device, pas de zoom auto, couleur de thème claire.

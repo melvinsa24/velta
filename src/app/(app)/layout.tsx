@@ -23,7 +23,9 @@ export default async function AppLayout({
   return (
     <>
       <AppHeader />
-      <div className="mx-auto w-full max-w-md flex-1 px-[18px] pt-[calc(3.5rem+18px)] pb-[100px]">
+      {/* Padding haut = header (56px) + 18px + encoche iOS ; bas = FAB + home
+          indicator iOS (safe areas, PWA standalone). */}
+      <div className="mx-auto w-full max-w-md flex-1 px-[18px] pt-[calc(3.5rem+18px+env(safe-area-inset-top))] pb-[calc(100px+env(safe-area-inset-bottom))]">
         {children}
       </div>
       <Fab expenseOptions={expenseOptions} monthClosed={activeStatus === 'closed'} />
