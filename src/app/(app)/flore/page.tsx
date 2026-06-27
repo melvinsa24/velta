@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getMonthContext } from '@/lib/data/activeMonth'
 import { floreRatio, floreShare } from '@/lib/calculs'
 import { FloreInputs } from './FloreInputs'
-import type { MonthlySettings, ShareMode } from '@/types/database'
+import { FlorePayments } from './FlorePayments'
+import type { FlorePayment, MonthlySettings, ShareMode } from '@/types/database'
 
 /*
  * Module Flore — saisie et calculs (SPECS §7.6, brief Phase 10a). Server
@@ -58,7 +59,7 @@ export default async function FlorePage({
 
   const supabase = await createClient()
 
-  const [settingsRes, budgetsRes] = await Promise.all([
+  const [settingsRes, budgetsRes, paymentsRes] = await Promise.all([
     supabase.from('monthly_settings').select('*').eq('month', month).maybeSingle(),
     // Dépenses partagées non archivées du mois. !inner + filtres sur la jointure :
     // PostgREST exclut bien les lignes hors critères (sinon expenses=null gardé).
@@ -68,10 +69,17 @@ export default async function FlorePage({
       .eq('month', month)
       .eq('expenses.archived', false)
       .in('expenses.share_mode', ['split_50_50', 'split_prorata']),
+    // Remboursements du mois (module isolé, SPECS §9.2), triés du plus récent.
+    supabase
+      .from('flore_payments')
+      .select('*')
+      .eq('month', month)
+      .order('date', { ascending: false }),
   ])
 
   const settings = settingsRes.data as MonthlySettings | null
   const budgets = (budgetsRes.data as SharedBudgetRow[] | null) ?? []
+  const payments = (paymentsRes.data as FlorePayment[] | null) ?? []
 
   const revenueFlore = settings?.revenue_flore ?? 0
   const apl = settings?.apl ?? null
@@ -173,6 +181,10 @@ export default async function FlorePage({
             </div>
           </>
         )}
+
+        {/* Section 5 — Remboursements (toujours visible, module isolé). `key`
+            force le reset du formulaire/état au changement de mois. */}
+        <FlorePayments key={month} payments={payments} totalDue={totalDue} />
       </div>
     </>
   )

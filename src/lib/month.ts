@@ -52,6 +52,16 @@ export function formatMonthLabel(monthIso: string): string {
 }
 
 /**
+ * 'YYYY-MM-DD' → '12 juin 2026' (affichage français, mois en minuscule).
+ * Date absolue avec année, adaptée aux listes historiques (ex : remboursements
+ * Flore) — contrairement à `formatDayLabel` qui est relatif et sans année.
+ */
+export function formatDateLong(dateIso: string): string {
+  const [year, month, day] = dateIso.split('-').map(Number)
+  return `${day} ${MONTHS_FR[month - 1].toLowerCase()} ${year}`
+}
+
+/**
  * 'YYYY-MM-DD' → libellé de jour pour le groupement de la liste transactions :
  * « Aujourd'hui », « Hier », ou « 12 juin » (mois en minuscule, sans année).
  * Comparaison sur les chaînes ISO locales (todayIso) : robuste aux fuseaux.
