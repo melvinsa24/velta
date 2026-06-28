@@ -18,6 +18,11 @@ import { createClient } from '@/lib/supabase/server'
 type ActionResult = { error: string | null }
 
 const REVALIDATE_PATHS = ['/historique', '/dashboard', '/flore']
+// Routes dynamiques (paramètre ?month=) : on les revalide en mode 'layout' et non
+// 'page'. Sur une route dynamique, revalidateP(path) (type 'page') empile des
+// segments dans le cache routeur App Router → doublons DOM au fil de la
+// navigation entre mois. 'layout' invalide le segment complet sans empiler.
+const DYNAMIC_MONTH_PATHS = new Set(['/flore', '/historique'])
 
 async function requireClient() {
   const supabase = await createClient()
@@ -29,7 +34,9 @@ async function requireClient() {
 }
 
 function revalidateAll() {
-  for (const path of REVALIDATE_PATHS) revalidatePath(path)
+  for (const path of REVALIDATE_PATHS) {
+    revalidatePath(path, DYNAMIC_MONTH_PATHS.has(path) ? 'layout' : 'page')
+  }
 }
 
 /*

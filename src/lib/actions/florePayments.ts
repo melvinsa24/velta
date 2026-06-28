@@ -47,7 +47,9 @@ export async function addFlorePayment(
   })
 
   if (error) return { error: error.message }
-  revalidatePath('/flore')
+  // Route dynamique (?month=) → 'layout' : évite l'empilement de segments dans
+  // le cache routeur App Router (doublons DOM au fil de la navigation entre mois).
+  revalidatePath('/flore', 'layout')
   return { error: null }
 }
 
@@ -56,6 +58,8 @@ export async function deleteFlorePayment(id: string): Promise<ActionResult> {
   const supabase = await requireClient()
   const { error } = await supabase.from('flore_payments').delete().eq('id', id)
   if (error) return { error: error.message }
-  revalidatePath('/flore')
+  // Route dynamique (?month=) → 'layout' : évite l'empilement de segments dans
+  // le cache routeur App Router (doublons DOM au fil de la navigation entre mois).
+  revalidatePath('/flore', 'layout')
   return { error: null }
 }

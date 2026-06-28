@@ -53,6 +53,18 @@ function revalidateAll() {
 }
 
 /*
+ * Revalidation des écrans impactés par une dépense prorata. `/flore` est une
+ * route dynamique (?month=) : on la revalide en 'layout' (et non 'page') pour
+ * éviter l'empilement de segments dans le cache routeur App Router, qui
+ * provoquait des doublons DOM au fil de la navigation entre mois.
+ */
+function revalidateProrata() {
+  for (const path of PRORATA_REVALIDATE_PATHS) {
+    revalidatePath(path, path === '/flore' ? 'layout' : 'page')
+  }
+}
+
+/*
  * Si la dépense n'est pas à crédit, on force les 3 champs crédit à null pour ne
  * pas laisser de données orphelines incohérentes en base.
  */
@@ -168,7 +180,7 @@ export async function archiveProrataExpense(id: string): Promise<ActionResult> {
     .update({ archived: true })
     .eq('id', id)
   if (error) return { error: error.message }
-  for (const path of PRORATA_REVALIDATE_PATHS) revalidatePath(path)
+  revalidateProrata()
   return { error: null }
 }
 
@@ -245,7 +257,7 @@ export async function addProrataExpense(input: {
 
   if (budgetError) return { error: budgetError.message }
 
-  for (const path of PRORATA_REVALIDATE_PATHS) revalidatePath(path)
+  revalidateProrata()
   return { error: null }
 }
 
@@ -284,6 +296,6 @@ export async function updateProrataExpense(input: {
 
   if (budgetError) return { error: budgetError.message }
 
-  for (const path of PRORATA_REVALIDATE_PATHS) revalidatePath(path)
+  revalidateProrata()
   return { error: null }
 }
