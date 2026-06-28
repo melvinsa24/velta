@@ -49,9 +49,11 @@ type ModalState = { mode: 'add' } | { mode: 'edit'; line: ProrataLine } | null
 export function FloreProrataExpenses({
   lines,
   hasFlore,
+  readOnly = false,
 }: {
   lines: ProrataLine[]
   hasFlore: boolean
+  readOnly?: boolean
 }) {
   const [modal, setModal] = useState<ModalState>(null)
   const [deleting, setDeleting] = useState<ProrataLine | null>(null)
@@ -62,7 +64,9 @@ export function FloreProrataExpenses({
         <h2 className="text-base font-bold tracking-tight text-ink">
           Dépenses au prorata
         </h2>
-        <Button onClick={() => setModal({ mode: 'add' })}>Ajouter</Button>
+        {!readOnly && (
+          <Button onClick={() => setModal({ mode: 'add' })}>Ajouter</Button>
+        )}
       </div>
 
       {lines.length === 0 ? (
@@ -75,6 +79,7 @@ export function FloreProrataExpenses({
               line={line}
               hasFlore={hasFlore}
               border={i > 0}
+              readOnly={readOnly}
               onEdit={() => setModal({ mode: 'edit', line })}
               onDelete={() => setDeleting(line)}
             />
@@ -120,12 +125,14 @@ function ProrataRow({
   line,
   hasFlore,
   border,
+  readOnly,
   onEdit,
   onDelete,
 }: {
   line: ProrataLine
   hasFlore: boolean
   border: boolean
+  readOnly: boolean
   onEdit: () => void
   onDelete: () => void
 }) {
@@ -154,22 +161,26 @@ function ProrataRow({
         <span className="tabular shrink-0 text-sm font-medium text-ink">
           {primary}
         </span>
-        <button
-          type="button"
-          onClick={onEdit}
-          aria-label={`Modifier ${line.label}`}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card text-ink-3 transition-colors hover:text-ink"
-        >
-          <Pencil size={16} aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          aria-label={`Supprimer ${line.label}`}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card text-ink-3 transition-colors hover:text-down"
-        >
-          <Trash2 size={16} aria-hidden="true" />
-        </button>
+        {!readOnly && (
+          <>
+            <button
+              type="button"
+              onClick={onEdit}
+              aria-label={`Modifier ${line.label}`}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card text-ink-3 transition-colors hover:text-ink"
+            >
+              <Pencil size={16} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              aria-label={`Supprimer ${line.label}`}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card text-ink-3 transition-colors hover:text-down"
+            >
+              <Trash2 size={16} aria-hidden="true" />
+            </button>
+          </>
+        )}
       </div>
       <p className="tabular mt-1 text-xs text-ink-3">{sub}</p>
     </div>

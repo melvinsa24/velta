@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, CopyPlus } from 'lucide-react'
 import { Button, Card, Modal } from '@/components/ui'
+import { ClosedMonthBanner } from '@/components/layout/ClosedMonthBanner'
 import { cn } from '@/lib/cn'
 import {
   CATEGORIES_BY_PARENT,
@@ -197,12 +198,8 @@ export function BudgetEditor({
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Bandeau « mois clôturé » : les modifications sont désactivées (Phase 9). */}
-      {readOnly && (
-        <div className="rounded-card border border-border bg-surface-2 px-3 py-2.5 text-sm text-ink-2">
-          Mois clôturé — les modifications sont désactivées.
-        </div>
-      )}
+      {/* Bandeau « mois clôturé » : consultation uniquement (Phase 9). */}
+      {readOnly && <ClosedMonthBanner />}
 
       {/* Revenu prévisionnel du mois — base des % du récap (SPECS §7.3). */}
       <div className="flex flex-col gap-1.5">

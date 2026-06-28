@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
+import { ClosedMonthBanner } from '@/components/layout/ClosedMonthBanner'
 import { Card } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { createClient } from '@/lib/supabase/server'
@@ -57,8 +58,11 @@ function formatEuros(n: number): string {
 export default async function DashboardPage() {
   // Mois actif (plus grand mois in_progress, sinon calendaire) : l'app continue
   // d'afficher ce mois tant qu'on n'a pas basculé, même si le calendrier a changé.
-  const { activeMonth: month, isBehind, nextMonth } = await getMonthContext()
+  const { activeMonth: month, activeStatus, isBehind, nextMonth } =
+    await getMonthContext()
   const supabase = await createClient()
+  // Mois actif clôturé → lecture seule (seul champ éditable du dashboard : la note).
+  const readOnly = activeStatus === 'closed'
 
   const [settingsRes, txRes, budgetsRes, credits, unplanned] = await Promise.all([
     supabase.from('monthly_settings').select('*').eq('month', month).maybeSingle(),
@@ -139,6 +143,8 @@ export default async function DashboardPage() {
       <ScreenHeader title={formatMonthLabel(month)} />
 
       <div className="flex flex-col gap-6">
+        {readOnly && <ClosedMonthBanner />}
+
         {/* Bannière de bascule : le mois actif est en retard sur le calendrier. */}
         {isBehind && (
           <MonthRolloverBanner
@@ -259,7 +265,11 @@ export default async function DashboardPage() {
         )}
 
         {/* Note du mois (sauvegarde auto débouncée). */}
-        <MonthNote month={month} initialNote={settings?.note ?? ''} />
+        <MonthNote
+          month={month}
+          initialNote={settings?.note ?? ''}
+          readOnly={readOnly}
+        />
       </div>
     </>
   )

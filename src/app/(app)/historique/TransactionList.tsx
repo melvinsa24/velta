@@ -81,9 +81,11 @@ function groupByDay(rows: TransactionRow[]): DayGroup[] {
 export function TransactionList({
   transactions,
   expenseOptions,
+  readOnly = false,
 }: {
   transactions: TransactionRow[]
   expenseOptions: ExpenseOption[]
+  readOnly?: boolean
 }) {
   const router = useRouter()
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('')
@@ -186,7 +188,7 @@ export function TransactionList({
                   key={tx.id}
                   tx={tx}
                   isFirst={index === 0}
-                  onEdit={() => setEditing(tx)}
+                  onEdit={readOnly ? undefined : () => setEditing(tx)}
                 />
               ))}
             </Card>
@@ -223,7 +225,8 @@ function TransactionItem({
 }: {
   tx: TransactionRow
   isFirst: boolean
-  onEdit: () => void
+  /** undefined = lecture seule : la ligne devient inerte (pas d'édition au tap). */
+  onEdit?: () => void
 }) {
   const expenseLabel = tx.expenses?.label ?? null
   const color = tx.expenses?.color ?? NEUTRAL_COLOR
@@ -240,17 +243,8 @@ function TransactionItem({
       ? tx.expenses.prorata_total_amount
       : null
 
-  return (
-    <button
-      type="button"
-      onClick={onEdit}
-      aria-label={`Modifier ${primary}`}
-      className={cn(
-        'flex min-h-11 w-full items-center gap-3 px-[18px] py-2.5 text-left',
-        'hover:bg-surface-2',
-        !isFirst && 'border-t border-border',
-      )}
-    >
+  const inner = (
+    <>
       <span
         className="h-2.5 w-2.5 shrink-0 rounded-card"
         style={{ backgroundColor: color }}
@@ -279,6 +273,25 @@ function TransactionItem({
       <span className="tabular shrink-0 text-sm font-medium text-ink">
         {formatEuros(tx.amount)}
       </span>
+    </>
+  )
+
+  const rowClass = cn(
+    'flex min-h-11 w-full items-center gap-3 px-[18px] py-2.5 text-left',
+    !isFirst && 'border-t border-border',
+  )
+
+  // Lecture seule (mois clôturé) : ligne inerte, pas d'édition au tap.
+  if (!onEdit) return <div className={rowClass}>{inner}</div>
+
+  return (
+    <button
+      type="button"
+      onClick={onEdit}
+      aria-label={`Modifier ${primary}`}
+      className={cn(rowClass, 'hover:bg-surface-2')}
+    >
+      {inner}
     </button>
   )
 }

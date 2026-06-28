@@ -1,5 +1,6 @@
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { MonthSelector } from '@/components/layout/MonthSelector'
+import { ClosedMonthBanner } from '@/components/layout/ClosedMonthBanner'
 import { Card } from '@/components/ui'
 import { createClient } from '@/lib/supabase/server'
 import { getMonthContext } from '@/lib/data/activeMonth'
@@ -53,7 +54,7 @@ export default async function FlorePage({
   searchParams: Promise<{ month?: string }>
 }) {
   const { month: monthParam } = await searchParams
-  const { activeMonth } = await getMonthContext()
+  const { activeMonth, calendarMonth } = await getMonthContext()
   // Mois actif par défaut ; l'URL fait foi dès qu'un mois est choisi.
   const month =
     monthParam && /^\d{4}-\d{2}-01$/.test(monthParam) ? monthParam : activeMonth
@@ -99,6 +100,8 @@ export default async function FlorePage({
   const revenueFlore = settings?.revenue_flore ?? 0
   const apl = settings?.apl ?? null
   const hasFlore = revenueFlore > 0
+  // Mois clôturé → lecture seule (statut du mois AFFICHÉ, pas du mois actif).
+  const readOnly = settings?.status === 'closed'
 
   const ratio = floreRatio({
     apl,
@@ -154,13 +157,21 @@ export default async function FlorePage({
       <ScreenHeader title="Flore" subtitle="Répartition des charges" />
 
       <div className="flex flex-col gap-6">
-        <MonthSelector month={month} basePath="/flore" />
+        <MonthSelector month={month} basePath="/flore" maxMonth={calendarMonth} />
+
+        {readOnly && <ClosedMonthBanner />}
 
         {/* Section 1 — Inputs du mois (sauvegarde au blur). `key={month}` force le
             remontage à chaque changement de mois : sans lui, l'état local des
             champs (valeurs saisies) survivrait à la navigation et un blur
             enregistrerait les valeurs du mois précédent sur le nouveau mois. */}
-        <FloreInputs key={month} month={month} apl={apl} revenueFlore={revenueFlore} />
+        <FloreInputs
+          key={month}
+          month={month}
+          apl={apl}
+          revenueFlore={revenueFlore}
+          readOnly={readOnly}
+        />
 
         {!hasFlore ? (
           <Card className="py-4">
@@ -230,13 +241,23 @@ export default async function FlorePage({
 
         {/* Section 5 — Remboursements (toujours visible, module isolé). `key`
             force le reset du formulaire/état au changement de mois. */}
-        <FlorePayments key={month} payments={payments} totalDue={totalDue} />
+        <FlorePayments
+          key={month}
+          payments={payments}
+          totalDue={totalDue}
+          readOnly={readOnly}
+        />
 
         {/* Dépenses au prorata (toujours visible : créées / gérées ici, brief 10c).
             La part nette est recalculée à la volée depuis le total. `key={month}`
             : remontage propre au changement de mois (cohérent avec les autres
             sections liées au mois, évite un doublon de rendu après mutation). */}
-        <FloreProrataExpenses key={month} lines={prorataLines} hasFlore={hasFlore} />
+        <FloreProrataExpenses
+          key={month}
+          lines={prorataLines}
+          hasFlore={hasFlore}
+          readOnly={readOnly}
+        />
       </div>
     </>
   )

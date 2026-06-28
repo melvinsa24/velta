@@ -51,12 +51,14 @@ export function RevenusPanel({
   revenueAutres,
   apl,
   revenueFlore,
+  readOnly = false,
 }: {
   month: string
   revenueSalaire: number
   revenueAutres: number
   apl: number | null
   revenueFlore: number
+  readOnly?: boolean
 }) {
   const [salaire, setSalaire] = useState(
     revenueSalaire > 0 ? String(revenueSalaire) : '',
@@ -93,6 +95,7 @@ export function RevenusPanel({
             value={salaire}
             onChange={setSalaire}
             onBlur={save}
+            disabled={readOnly}
           />
         </RevenuRow>
 
@@ -115,6 +118,7 @@ export function RevenusPanel({
             value={autres}
             onChange={setAutres}
             onBlur={save}
+            disabled={readOnly}
           />
         </RevenuRow>
       </div>
@@ -168,11 +172,13 @@ function AmountInput({
   value,
   onChange,
   onBlur,
+  disabled = false,
 }: {
   id: string
   value: string
   onChange: (v: string) => void
   onBlur: () => void
+  disabled?: boolean
 }) {
   return (
     <div className="flex items-center gap-1">
@@ -182,8 +188,9 @@ function AmountInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
+        disabled={disabled}
         placeholder="0"
-        className="tabular h-11 w-28 rounded-card border border-border bg-surface px-2 text-right text-base text-ink outline-none transition-colors focus:border-ink"
+        className="tabular h-11 w-28 rounded-card border border-border bg-surface px-2 text-right text-base text-ink outline-none transition-colors focus:border-ink disabled:bg-surface-2 disabled:text-ink-3"
       />
       <span className="w-3 text-sm text-ink-3" aria-hidden="true">
         €

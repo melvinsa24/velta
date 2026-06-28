@@ -25,10 +25,12 @@ export function FloreInputs({
   month,
   apl,
   revenueFlore,
+  readOnly = false,
 }: {
   month: string
   apl: number | null
   revenueFlore: number
+  readOnly?: boolean
 }) {
   const [aplValue, setAplValue] = useState(apl && apl > 0 ? String(apl) : '')
   const [floreValue, setFloreValue] = useState(
@@ -61,6 +63,7 @@ export function FloreInputs({
             value={aplValue}
             onChange={setAplValue}
             onBlur={save}
+            disabled={readOnly}
           />
         </FloreRow>
         <FloreRow label="Revenus de Flore" htmlFor="flore-revenue" border>
@@ -69,6 +72,7 @@ export function FloreInputs({
             value={floreValue}
             onChange={setFloreValue}
             onBlur={save}
+            disabled={readOnly}
           />
         </FloreRow>
       </div>
@@ -114,11 +118,13 @@ function AmountInput({
   value,
   onChange,
   onBlur,
+  disabled = false,
 }: {
   id: string
   value: string
   onChange: (v: string) => void
   onBlur: () => void
+  disabled?: boolean
 }) {
   return (
     <div className="flex items-center gap-1">
@@ -128,8 +134,9 @@ function AmountInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
+        disabled={disabled}
         placeholder="0"
-        className="tabular h-11 w-28 rounded-card border border-border bg-surface px-2 text-right text-base text-ink outline-none transition-colors focus:border-ink"
+        className="tabular h-11 w-28 rounded-card border border-border bg-surface px-2 text-right text-base text-ink outline-none transition-colors focus:border-ink disabled:bg-surface-2 disabled:text-ink-3"
       />
       <span className="w-3 text-sm text-ink-3" aria-hidden="true">
         €

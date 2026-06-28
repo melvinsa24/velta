@@ -1,6 +1,6 @@
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { createClient } from '@/lib/supabase/server'
-import { normalizeMonth } from '@/lib/month'
+import { normalizeMonth, currentMonthStart } from '@/lib/month'
 import { getMonthExpenseOptions } from '@/lib/data/expenseOptions'
 import { HistoriqueScreen } from './HistoriqueScreen'
 import { type TransactionRow } from './TransactionList'
@@ -35,7 +35,7 @@ export default async function HistoriquePage({
     getMonthExpenseOptions(month),
     supabase
       .from('monthly_settings')
-      .select('revenue_salaire, revenue_autres, apl, revenue_flore')
+      .select('revenue_salaire, revenue_autres, apl, revenue_flore, status')
       .eq('month', month)
       .maybeSingle(),
   ])
@@ -43,14 +43,19 @@ export default async function HistoriquePage({
   const transactions = (txRes.data as TransactionRow[] | null) ?? []
   const settings = settingsRes.data as Pick<
     MonthlySettings,
-    'revenue_salaire' | 'revenue_autres' | 'apl' | 'revenue_flore'
+    'revenue_salaire' | 'revenue_autres' | 'apl' | 'revenue_flore' | 'status'
   > | null
+
+  // Mois clôturé (statut du mois AFFICHÉ) → lecture seule sur tout l'écran.
+  const readOnly = settings?.status === 'closed'
 
   return (
     <>
       <ScreenHeader title="Historique" />
       <HistoriqueScreen
         month={month}
+        maxMonth={currentMonthStart()}
+        readOnly={readOnly}
         transactions={transactions}
         expenseOptions={expenseOptions}
         revenus={{

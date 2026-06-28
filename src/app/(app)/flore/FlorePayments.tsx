@@ -37,9 +37,11 @@ function formatEuros(n: number): string {
 export function FlorePayments({
   payments,
   totalDue,
+  readOnly = false,
 }: {
   payments: FlorePayment[]
   totalDue: number
+  readOnly?: boolean
 }) {
   const [addOpen, setAddOpen] = useState(false)
   // Remboursement en cours de suppression (null = aucune confirmation ouverte).
@@ -55,7 +57,9 @@ export function FlorePayments({
         <h2 className="text-base font-bold tracking-tight text-ink">
           Remboursements
         </h2>
-        <Button onClick={() => setAddOpen(true)}>Flore m&apos;a remboursé</Button>
+        {!readOnly && (
+          <Button onClick={() => setAddOpen(true)}>Flore m&apos;a remboursé</Button>
+        )}
       </div>
 
       {/* Liste des remboursements du mois. */}
@@ -68,6 +72,7 @@ export function FlorePayments({
               key={p.id}
               payment={p}
               border={i > 0}
+              readOnly={readOnly}
               onDelete={() => setDeleting(p)}
             />
           ))}
@@ -116,10 +121,12 @@ export function FlorePayments({
 function PaymentRow({
   payment,
   border,
+  readOnly,
   onDelete,
 }: {
   payment: FlorePayment
   border: boolean
+  readOnly: boolean
   onDelete: () => void
 }) {
   return (
@@ -137,14 +144,16 @@ function PaymentRow({
       <span className="tabular shrink-0 text-sm font-medium text-ink">
         {formatEuros(payment.amount)}
       </span>
-      <button
-        type="button"
-        onClick={onDelete}
-        aria-label="Supprimer ce remboursement"
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card text-ink-3 transition-colors hover:text-down"
-      >
-        <Trash2 size={18} aria-hidden="true" />
-      </button>
+      {!readOnly && (
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label="Supprimer ce remboursement"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card text-ink-3 transition-colors hover:text-down"
+        >
+          <Trash2 size={18} aria-hidden="true" />
+        </button>
+      )}
     </div>
   )
 }

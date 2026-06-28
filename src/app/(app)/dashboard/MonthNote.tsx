@@ -11,9 +11,11 @@ import { upsertNote } from '@/lib/actions/monthlySettings'
 export function MonthNote({
   month,
   initialNote,
+  readOnly = false,
 }: {
   month: string
   initialNote: string
+  readOnly?: boolean
 }) {
   const [note, setNote] = useState(initialNote)
   const [saved, setSaved] = useState(false)
@@ -54,9 +56,10 @@ export function MonthNote({
         id="month-note"
         value={note}
         onChange={(e) => handleChange(e.target.value)}
+        disabled={readOnly}
         rows={3}
         placeholder="Un mot sur ce mois (optionnel)…"
-        className="w-full resize-none rounded-card border border-border bg-surface px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-3 focus:border-ink"
+        className="w-full resize-none rounded-card border border-border bg-surface px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-3 focus:border-ink disabled:bg-surface-2 disabled:text-ink-3"
       />
     </section>
   )

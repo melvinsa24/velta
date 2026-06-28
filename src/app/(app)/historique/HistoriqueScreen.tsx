@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { MonthSelector } from '@/components/layout/MonthSelector'
+import { ClosedMonthBanner } from '@/components/layout/ClosedMonthBanner'
 import { cn } from '@/lib/cn'
 import { TransactionList, type TransactionRow } from './TransactionList'
 import { RevenusPanel } from './RevenusPanel'
@@ -16,11 +17,15 @@ type Tab = 'depenses' | 'revenus'
 
 export function HistoriqueScreen({
   month,
+  maxMonth,
+  readOnly = false,
   transactions,
   expenseOptions,
   revenus,
 }: {
   month: string
+  maxMonth?: string
+  readOnly?: boolean
   transactions: TransactionRow[]
   expenseOptions: ExpenseOption[]
   revenus: {
@@ -34,7 +39,9 @@ export function HistoriqueScreen({
 
   return (
     <div className="flex flex-col gap-5">
-      <MonthSelector month={month} basePath="/historique" />
+      <MonthSelector month={month} basePath="/historique" maxMonth={maxMonth} />
+
+      {readOnly && <ClosedMonthBanner />}
 
       {/* Sous-onglets sobres */}
       <div className="flex gap-6 border-b border-border" role="tablist">
@@ -53,6 +60,7 @@ export function HistoriqueScreen({
         <TransactionList
           transactions={transactions}
           expenseOptions={expenseOptions}
+          readOnly={readOnly}
         />
       ) : (
         <RevenusPanel
@@ -62,6 +70,7 @@ export function HistoriqueScreen({
           revenueAutres={revenus.revenue_autres}
           apl={revenus.apl}
           revenueFlore={revenus.revenue_flore}
+          readOnly={readOnly}
         />
       )}
     </div>
