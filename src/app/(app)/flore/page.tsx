@@ -161,12 +161,15 @@ export default async function FlorePage({
 
         {readOnly && <ClosedMonthBanner />}
 
-        {/* Section 1 — Inputs du mois (sauvegarde au blur). `key={month}` force le
-            remontage à chaque changement de mois : sans lui, l'état local des
+        {/* Section 1 — Inputs du mois (sauvegarde au blur). La key force le
+            remontage à chaque changement de mois : sans elle, l'état local des
             champs (valeurs saisies) survivrait à la navigation et un blur
-            enregistrerait les valeurs du mois précédent sur le nouveau mois. */}
+            enregistrerait les valeurs du mois précédent sur le nouveau mois.
+            Préfixe `inputs-` : les 3 sections keyées sont des frères directs, un
+            simple `key={month}` collisionnerait entre elles (React dupliquerait
+            les enfants au fil des navigations). */}
         <FloreInputs
-          key={month}
+          key={`inputs-${month}`}
           month={month}
           apl={apl}
           revenueFlore={revenueFlore}
@@ -239,21 +242,22 @@ export default async function FlorePage({
           </>
         )}
 
-        {/* Section 5 — Remboursements (toujours visible, module isolé). `key`
-            force le reset du formulaire/état au changement de mois. */}
+        {/* Section 5 — Remboursements (toujours visible, module isolé). La key
+            (préfixée `payments-`, cf. Section 1) force le reset du formulaire/état
+            au changement de mois. */}
         <FlorePayments
-          key={month}
+          key={`payments-${month}`}
           payments={payments}
           totalDue={totalDue}
           readOnly={readOnly}
         />
 
         {/* Dépenses au prorata (toujours visible : créées / gérées ici, brief 10c).
-            La part nette est recalculée à la volée depuis le total. `key={month}`
-            : remontage propre au changement de mois (cohérent avec les autres
-            sections liées au mois, évite un doublon de rendu après mutation). */}
+            La part nette est recalculée à la volée depuis le total. La key
+            (préfixée `prorata-`, cf. Section 1) assure un remontage propre au
+            changement de mois. */}
         <FloreProrataExpenses
-          key={month}
+          key={`prorata-${month}`}
           lines={prorataLines}
           hasFlore={hasFlore}
           readOnly={readOnly}
