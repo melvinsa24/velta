@@ -1,6 +1,9 @@
 import { cn } from '@/lib/cn'
 
-type InputProps = React.InputHTMLAttributes<HTMLInputElement>
+// ComponentPropsWithRef (et non InputHTMLAttributes) : en React 19 `ref` est une
+// prop ordinaire des composants fonction, transmise par le spread ci-dessous.
+// Nécessaire pour que l'appelant puisse focus/select le champ (cf. ExpenseQuickEntrySheet).
+type InputProps = React.ComponentPropsWithRef<'input'>
 
 /*
  * Champ texte : surface blanche, rayon 10px, bordure --border.

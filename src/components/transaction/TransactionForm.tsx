@@ -78,18 +78,23 @@ type Mode = 'expense' | 'free'
  *
  * `month` n'est PAS saisi : il est recalculé côté serveur depuis la date.
  * En édition, si `onDeleted` est fourni, un bouton Supprimer (confirmation
- * inline) supprime la transaction.
+ * inline) supprime la transaction. `onCancel` permet à l'appelant de distinguer
+ * l'abandon du succès (ex : ExpenseQuickEntrySheet revient à sa vue de saisie
+ * au lieu de se fermer) ; sans lui, « Annuler » retombe sur `onDone`.
  */
 export function TransactionForm({
   initial,
   expenseOptions,
   onDone,
   onDeleted,
+  onCancel,
 }: {
   initial?: TransactionInitial | null
   expenseOptions: ExpenseOption[]
   onDone: () => void
   onDeleted?: () => void
+  /** Abandon explicite. Défaut : `onDone` (comportement historique). */
+  onCancel?: () => void
 }) {
   const hasExpenses = expenseOptions.length > 0
 
@@ -276,7 +281,7 @@ export function TransactionForm({
       )}
 
       <div className="mt-1 flex gap-3">
-        <Button type="button" variant="secondary" onClick={onDone}>
+        <Button type="button" variant="secondary" onClick={onCancel ?? onDone}>
           Annuler
         </Button>
         <Button type="submit" disabled={pending} className="flex-1">

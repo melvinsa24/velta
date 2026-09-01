@@ -8,6 +8,7 @@ import { formatMonthLabel } from '@/lib/month'
 import { getMonthContext } from '@/lib/data/activeMonth'
 import { getCreditsInProgress, type CreditRow } from '@/lib/data/credits'
 import { getUnplannedDetail } from '@/lib/data/unplanned'
+import { getMonthExpenseOptions } from '@/lib/data/expenseOptions'
 import { realTotalsByParent, revenusReelsMelvin } from '@/lib/calculs'
 import { MonthRolloverBanner } from './MonthRolloverBanner'
 import { UnplannedSection } from './UnplannedSection'
@@ -22,6 +23,8 @@ import type {
   ParentType,
 } from '@/types/database'
 import { MonthNote } from './MonthNote'
+import { ExpenseLineCard } from './ExpenseLineCard'
+import type { ExpenseTx } from '@/components/expense/ExpenseQuickEntrySheet'
 
 /*
  * Dashboard du mois (SPECS §6, §7.1, §9). Server Component : charge les réglages
@@ -34,12 +37,10 @@ import { MonthNote } from './MonthNote'
  * `revenusReelsMelvin` (src/lib/calculs.ts).
  */
 
-/* Transaction allégée pour les agrégats du Dashboard. */
-type TxRow = {
-  amount: number
-  expense_id: string | null
-  category: CategoryType
-}
+/* Transaction allégée pour les agrégats du Dashboard. Les colonnes id / date /
+ * description ne servent pas aux agrégats mais alimentent la liste de la saisie
+ * rapide (ExpenseQuickEntrySheet) : même requête, 3 colonnes de plus. */
+type TxRow = ExpenseTx
 
 /* Ligne de budget jointe à sa dépense (libellé / couleur / catégorie). */
 type BudgetRow = {
@@ -64,25 +65,37 @@ export default async function DashboardPage() {
   // Mois actif clôturé → lecture seule (seul champ éditable du dashboard : la note).
   const readOnly = activeStatus === 'closed'
 
-  const [settingsRes, txRes, budgetsRes, credits, unplanned] = await Promise.all([
-    supabase.from('monthly_settings').select('*').eq('month', month).maybeSingle(),
-    supabase
-      .from('transactions')
-      .select('amount, expense_id, category')
-      .eq('month', month),
-    // !inner + filtre archived=false : exclut les lignes dont la dépense est
-    // archivée (SPECS §7.3/§9.7) ; sans !inner, PostgREST garderait la ligne
-    // avec expenses=null au lieu de l'exclure.
-    supabase
-      .from('monthly_budgets')
-      .select('planned_amount, expense_id, expenses!inner(label, color, category)')
-      .eq('month', month)
-      .eq('expenses.archived', false),
-    // Crédits en cours (is_credit + non archivés), mensualité = montant du mois actif.
-    getCreditsInProgress(month),
-    // Dépenses imprévues détaillées (filtre strict expense_id IS NULL côté requête).
-    getUnplannedDetail(month),
-  ])
+  const [settingsRes, txRes, budgetsRes, credits, unplanned, expenseOptions] =
+    await Promise.all([
+      supabase
+        .from('monthly_settings')
+        .select('*')
+        .eq('month', month)
+        .maybeSingle(),
+      // Tri identique à l'Historique : la saisie rapide affiche les transactions
+      // d'une dépense de la plus récente à la plus ancienne.
+      supabase
+        .from('transactions')
+        .select('id, date, amount, expense_id, category, description')
+        .eq('month', month)
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false }),
+      // !inner + filtre archived=false : exclut les lignes dont la dépense est
+      // archivée (SPECS §7.3/§9.7) ; sans !inner, PostgREST garderait la ligne
+      // avec expenses=null au lieu de l'exclure.
+      supabase
+        .from('monthly_budgets')
+        .select('planned_amount, expense_id, expenses!inner(label, color, category)')
+        .eq('month', month)
+        .eq('expenses.archived', false),
+      // Crédits en cours (is_credit + non archivés), mensualité = montant du mois actif.
+      getCreditsInProgress(month),
+      // Dépenses imprévues détaillées (filtre strict expense_id IS NULL côté requête).
+      getUnplannedDetail(month),
+      // Dépenses du mois : uniquement pour la vue édition de la saisie rapide
+      // (le FAB reçoit les siennes du layout, qu'on ne peut pas relayer ici).
+      getMonthExpenseOptions(month),
+    ])
 
   const settings = settingsRes.data as MonthlySettings | null
   const transactions = (txRes.data as TxRow[] | null) ?? []
@@ -123,14 +136,19 @@ export default async function DashboardPage() {
   // --- Jauges : réel par type (base = revenu réel).
   const realByParent = realTotalsByParent(transactions)
 
-  // --- Bloc dépenses : réel par dépense (Σ transactions reliées).
+  // --- Bloc dépenses : réel par dépense (Σ transactions reliées) + le détail
+  // de ces transactions, passé à la saisie rapide de chaque ligne.
   const realByExpense = new Map<string, number>()
+  const txByExpense = new Map<string, TxRow[]>()
   for (const t of transactions) {
     if (!t.expense_id) continue
     realByExpense.set(
       t.expense_id,
       (realByExpense.get(t.expense_id) ?? 0) + t.amount,
     )
+    const list = txByExpense.get(t.expense_id)
+    if (list) list.push(t)
+    else txByExpense.set(t.expense_id, [t])
   }
 
   // Bloc « Dépenses imprévues » : détail fourni par getUnplannedDetail (filtre
@@ -232,12 +250,22 @@ export default async function DashboardPage() {
                   </p>
                   <div className="flex flex-col gap-2">
                     {lines.map((line) => (
-                      <ExpenseLine
+                      <ExpenseLineCard
                         key={line.expense_id}
-                        label={line.expenses!.label}
-                        color={line.expenses!.color}
+                        expense={{
+                          id: line.expense_id,
+                          label: line.expenses!.label,
+                          color: line.expenses!.color,
+                          category: line.expenses!.category,
+                        }}
+                        // Pour une dépense au prorata, `planned_amount` porte
+                        // déjà la part nette (snapshot écrit depuis Flore).
                         planned={line.planned_amount}
                         real={realByExpense.get(line.expense_id) ?? 0}
+                        month={month}
+                        transactions={txByExpense.get(line.expense_id) ?? []}
+                        expenseOptions={expenseOptions}
+                        readOnly={readOnly}
                       />
                     ))}
                   </div>
@@ -310,60 +338,6 @@ function RatioGauge({
           style={{ width: `${width}%` }}
         />
       </div>
-    </div>
-  )
-}
-
-/* Ligne d'une dépense prévue : pastille couleur, libellé + prévu, réel,
- * mini-jauge --ink (proportion réel/prévu). Bordure --down + message si
- * dépassement ; jauge --warn dès 80 % du prévu (SPECS §7.1). */
-function ExpenseLine({
-  label,
-  color,
-  planned,
-  real,
-}: {
-  label: string
-  color: string
-  planned: number
-  real: number
-}) {
-  const ratio = planned > 0 ? real / planned : real > 0 ? 1 : 0
-  const width = Math.max(0, Math.min(100, ratio * 100))
-  const over = real > planned && planned > 0
-  const warn = ratio >= 0.8
-  const barTone = warn ? 'bg-warn' : 'bg-ink'
-
-  return (
-    <div
-      className={cn(
-        'rounded-card border bg-surface p-[14px] shadow-card',
-        over ? 'border-down' : 'border-border',
-      )}
-    >
-      <div className="flex items-center gap-2.5">
-        <span
-          className="h-2.5 w-2.5 shrink-0 rounded-card"
-          style={{ backgroundColor: color }}
-          aria-hidden="true"
-        />
-        <span className="min-w-0 flex-1 truncate text-sm text-ink">{label}</span>
-        <span className="tabular shrink-0 text-sm text-ink">
-          <span className="font-medium">{formatEuros(real)}</span>
-          <span className="text-ink-3"> / {formatEuros(planned)}</span>
-        </span>
-      </div>
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
-        <div
-          className={cn('h-full rounded-full', barTone)}
-          style={{ width: `${width}%` }}
-        />
-      </div>
-      {over && (
-        <p className="tabular mt-1.5 text-xs font-medium text-down">
-          ⚠ Dépassé de {formatEuros(real - planned)}
-        </p>
-      )}
     </div>
   )
 }

@@ -45,6 +45,25 @@ export function monthStartOfDate(dateIso: string): string {
   return `${year}-${month}-01`
 }
 
+/**
+ * Date à pré-remplir dans une saisie rattachée à un mois donné : aujourd'hui si
+ * l'on est bien dans ce mois, sinon le DERNIER JOUR de ce mois.
+ *
+ * Le `month` d'une transaction est déduit de sa date côté serveur
+ * (cf. `monthStartOfDate`) : proposer « aujourd'hui » depuis un écran qui affiche
+ * un mois passé — cas du mois actif en retard sur le calendrier, cf.
+ * MonthRolloverBanner — enregistrerait la transaction dans un AUTRE mois, où elle
+ * disparaîtrait de la vue d'où elle a été saisie. Le champ reste modifiable.
+ */
+export function defaultDateForMonth(monthIso: string): string {
+  const today = todayIso()
+  if (monthStartOfDate(today) === monthIso) return today
+  const [year, month] = monthIso.split('-').map(Number)
+  // Jour 0 du mois suivant = dernier jour de `monthIso` (Date gère les bissextiles).
+  const lastDay = new Date(year, month, 0).getDate()
+  return `${monthIso.slice(0, 8)}${String(lastDay).padStart(2, '0')}`
+}
+
 /** 'YYYY-MM-01' → 'Juin 2026' (affichage français). */
 export function formatMonthLabel(monthIso: string): string {
   const [year, month] = monthIso.split('-').map(Number)
