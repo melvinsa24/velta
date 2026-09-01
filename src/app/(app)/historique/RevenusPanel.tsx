@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { upsertRevenusReels } from '@/lib/actions/monthlySettings'
+import { formatEurosCents, parseAmount } from '@/lib/format'
 
 /*
  * Sous-onglet « Revenus » de l'écran Historique (SPECS §7.5). Trois lignes :
@@ -14,20 +15,6 @@ import { upsertRevenusReels } from '@/lib/actions/monthlySettings'
  * réel sont recalculés ici, jamais persistés. Sauvegarde au blur ; salaire et
  * autres sont toujours envoyés ensemble.
  */
-
-/* Parse une saisie FR (virgule décimale tolérée) ; 0 si vide / invalide. */
-function parseAmount(value: string): number {
-  if (!value.trim()) return 0
-  const n = Number(value.replace(',', '.'))
-  return Number.isFinite(n) ? n : 0
-}
-
-function formatEuros(n: number): string {
-  return `${n.toLocaleString('fr-FR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} €`
-}
 
 /*
  * Part d'APL revenant à Melvin (SPECS §7.5 / brief Phase 8a) :
@@ -103,7 +90,7 @@ export function RevenusPanel({
         <RevenuRow label="APL (ma part)" border>
           <div className="flex flex-col items-end">
             <span className="tabular text-base text-ink">
-              {part !== null ? formatEuros(part) : '—'}
+              {part !== null ? formatEurosCents(part) : '—'}
             </span>
             <span className="text-[11px] text-ink-3">
               Calculé depuis l&apos;onglet Flore
@@ -133,7 +120,7 @@ export function RevenusPanel({
       <div className="flex items-center justify-between rounded-card border border-border bg-surface-2 px-[18px] py-3">
         <span className="text-sm font-medium text-ink">Total réel</span>
         <span className="tabular text-lg font-bold text-ink">
-          {formatEuros(total)}
+          {formatEurosCents(total)}
         </span>
       </div>
     </div>

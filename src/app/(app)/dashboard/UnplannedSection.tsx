@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react'
 import { Card, Modal } from '@/components/ui'
 import { CATEGORY_TYPE_LABELS } from '@/lib/categoryMeta'
 import { formatDayLabel } from '@/lib/month'
+import { formatEuros } from '@/lib/format'
 import type { UnplannedCategory } from '@/lib/data/unplanned'
 
 /*
@@ -13,13 +14,6 @@ import type { UnplannedCategory } from '@/lib/data/unplanned'
  * catégorie ouvre une modale détaillant ses transactions (date, description,
  * montant). Données fournies par getUnplannedDetail (filtre strict expense_id null).
  */
-function formatEuros(n: number): string {
-  return `${n.toLocaleString('fr-FR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })} €`
-}
-
 export function UnplannedSection({
   categories,
 }: {

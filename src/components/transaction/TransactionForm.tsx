@@ -11,6 +11,7 @@ import {
   PARENT_ORDER,
 } from '@/lib/categoryMeta'
 import { todayIso } from '@/lib/month'
+import { parseAmount } from '@/lib/format'
 import {
   createTransaction,
   updateTransaction,
@@ -55,13 +56,6 @@ function Field({
       {children}
     </div>
   )
-}
-
-/* Parse une saisie FR (virgule décimale tolérée) ; 0 si vide / invalide. */
-function parseAmount(value: string): number {
-  if (!value.trim()) return 0
-  const n = Number(value.replace(',', '.'))
-  return Number.isFinite(n) ? n : 0
 }
 
 type Mode = 'expense' | 'free'

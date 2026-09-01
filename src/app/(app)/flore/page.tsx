@@ -5,6 +5,7 @@ import { Card } from '@/components/ui'
 import { createClient } from '@/lib/supabase/server'
 import { getMonthContext } from '@/lib/data/activeMonth'
 import { floreRatio, floreShare } from '@/lib/calculs'
+import { formatEurosCents } from '@/lib/format'
 import { FloreInputs } from './FloreInputs'
 import { FloreProrataExpenses } from './FloreProrataExpenses'
 import { FlorePayments } from './FlorePayments'
@@ -32,13 +33,6 @@ type SharedBudgetRow = {
 const SHARE_BADGE: Record<Extract<ShareMode, 'split_50_50' | 'split_prorata'>, string> = {
   split_50_50: '50/50',
   split_prorata: 'prorata',
-}
-
-function formatEuros(n: number): string {
-  return `${n.toLocaleString('fr-FR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} €`
 }
 
 function formatPct(ratio: number): string {
@@ -228,14 +222,14 @@ export default async function FlorePage({
                 {apure ? 'Solde apuré' : 'Flore me doit'}
               </p>
               <p className="tabular mt-2 text-[40px] leading-[44px] font-bold tracking-[-0.035em] text-white">
-                {formatEuros(soldeRestant)}
+                {formatEurosCents(soldeRestant)}
               </p>
               <p className="tabular mt-1.5 text-sm text-white/55">
-                Charges {formatEuros(totalCharges)} − APL {formatEuros(aplFlore)}
+                Charges {formatEurosCents(totalCharges)} − APL {formatEurosCents(aplFlore)}
               </p>
               {totalRembourse > 0 && (
                 <p className="tabular mt-0.5 text-sm text-white/55">
-                  Dont {formatEuros(totalRembourse)} déjà remboursé
+                  Dont {formatEurosCents(totalRembourse)} déjà remboursé
                 </p>
               )}
             </div>
@@ -310,12 +304,12 @@ function SharedLine({
           {SHARE_BADGE[line.shareMode]}
         </span>
         <span className="tabular shrink-0 text-sm font-medium text-ink">
-          {formatEuros(line.planned)}
+          {formatEurosCents(line.planned)}
         </span>
       </div>
       <div className="tabular mt-1.5 flex justify-end gap-4 text-xs text-ink-3">
-        <span>Moi {formatEuros(line.melvinShare)}</span>
-        <span>Flore {formatEuros(line.floreShare)}</span>
+        <span>Moi {formatEurosCents(line.melvinShare)}</span>
+        <span>Flore {formatEurosCents(line.floreShare)}</span>
       </div>
     </div>
   )
@@ -327,7 +321,7 @@ function AplLine({ amount }: { amount: number }) {
     <div className="flex items-center justify-between border-t border-border px-[18px] py-3">
       <span className="text-sm text-ink-2">APL (déduite)</span>
       <span className="tabular text-sm font-medium text-ink-2">
-        −{formatEuros(amount)}
+        −{formatEurosCents(amount)}
       </span>
     </div>
   )

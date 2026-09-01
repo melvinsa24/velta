@@ -6,6 +6,7 @@ import { Button, Input, Modal } from '@/components/ui'
 import { ClosedMonthBanner } from '@/components/layout/ClosedMonthBanner'
 import { cn } from '@/lib/cn'
 import { defaultDateForMonth, formatDayLabel } from '@/lib/month'
+import { formatEuros, formatEurosCents, parseAmount } from '@/lib/format'
 import { createTransaction } from '@/lib/actions/transactions'
 import {
   TransactionForm,
@@ -21,8 +22,8 @@ import type { CategoryType, Transaction } from '@/types/database'
  * qui se ferme rendrait le scroll alors que la sheet est encore ouverte.
  *   - vue « saisie »  : montant pré-rempli au restant + date + note + CTA, puis
  *     la liste des transactions du mois déjà rattachées à cette dépense ;
- *     - vue « édition » : `TransactionForm` (la modale de l'Historique, suppression
- *     incluse), atteinte au tap sur une ligne de cette liste.
+ *   - vue « édition » : `TransactionForm` (la modale de l'Historique,
+ *     suppression incluse), atteinte au tap sur une ligne de cette liste.
  *
  * Le composant ne fait AUCUN calcul propre à un écran : `planned` arrive déjà
  * résolu (pour une dépense au prorata, c'est la part nette lue dans
@@ -48,29 +49,6 @@ export type ExpenseTx = Pick<
   Transaction,
   'id' | 'date' | 'amount' | 'expense_id' | 'category' | 'description'
 >
-
-/* Parse une saisie FR (virgule décimale tolérée) ; 0 si vide / invalide. */
-function parseAmount(value: string): number {
-  if (!value.trim()) return 0
-  const n = Number(value.replace(',', '.'))
-  return Number.isFinite(n) ? n : 0
-}
-
-/* Montants affichés : convention du Dashboard (0 à 2 décimales). */
-function formatEuros(n: number): string {
-  return `${n.toLocaleString('fr-FR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })} €`
-}
-
-/* Montant du CTA : toujours 2 décimales (c'est la somme qu'on va enregistrer). */
-function formatEurosCta(n: number): string {
-  return `${n.toLocaleString('fr-FR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} €`
-}
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100
@@ -326,7 +304,7 @@ function QuickEntryBody({
             {pending
               ? 'Enregistrement…'
               : canSubmit
-                ? `Valider ${formatEurosCta(typed)}`
+                ? `Valider ${formatEurosCents(typed)}`
                 : 'Valider'}
           </Button>
         </form>

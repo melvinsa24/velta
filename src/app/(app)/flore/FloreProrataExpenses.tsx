@@ -8,6 +8,7 @@ import {
   updateProrataExpense,
   archiveProrataExpense,
 } from '@/lib/actions/expenses'
+import { formatEurosCents, parseAmount } from '@/lib/format'
 
 /*
  * Section « Dépenses au prorata » de l'onglet Flore (brief Phase 10c). Les
@@ -28,20 +29,6 @@ export type ProrataLine = {
   total: number | null
   floreShare: number
   melvinShare: number
-}
-
-/* Parse une saisie FR (virgule décimale tolérée) ; 0 si vide / invalide. */
-function parseAmount(value: string): number {
-  if (!value.trim()) return 0
-  const n = Number(value.replace(',', '.'))
-  return Number.isFinite(n) ? n : 0
-}
-
-function formatEuros(n: number): string {
-  return `${n.toLocaleString('fr-FR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} €`
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; line: ProrataLine } | null
@@ -142,14 +129,14 @@ function ProrataRow({
   const primary = !hasTotal
     ? '—'
     : hasFlore
-      ? formatEuros(line.melvinShare)
-      : formatEuros(line.total!)
+      ? formatEurosCents(line.melvinShare)
+      : formatEurosCents(line.total!)
 
   // Sous-ligne explicative.
   const sub = !hasTotal
     ? 'Montant total à renseigner'
     : hasFlore
-      ? `Total : ${formatEuros(line.total!)} · Part Flore : ${formatEuros(line.floreShare)}`
+      ? `Total : ${formatEurosCents(line.total!)} · Part Flore : ${formatEurosCents(line.floreShare)}`
       : 'Revenus Flore non renseignés — 100 % à votre charge'
 
   return (

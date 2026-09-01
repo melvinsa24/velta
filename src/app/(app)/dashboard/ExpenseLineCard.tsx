@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { formatEuros } from '@/lib/format'
 import {
   ExpenseQuickEntrySheet,
   type ExpenseTx,
@@ -19,13 +20,6 @@ import type { ExpenseOption } from '@/components/transaction/TransactionForm'
  * raccourci qui s'ajoute au FAB, lequel reste inchangé. Elle reste tappable sur
  * un mois clôturé : la sheet s'ouvre alors en consultation.
  */
-function formatEuros(n: number): string {
-  return `${n.toLocaleString('fr-FR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })} €`
-}
-
 export function ExpenseLineCard({
   expense,
   planned,

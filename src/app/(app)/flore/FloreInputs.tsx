@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { upsertFloreInputs } from '@/lib/actions/monthlySettings'
+import { parseAmount } from '@/lib/format'
 
 /*
  * Section 1 de l'onglet Flore (SPECS §7.6 / brief Phase 10a) : deux champs du
@@ -13,13 +14,6 @@ import { upsertFloreInputs } from '@/lib/actions/monthlySettings'
  * l'action les rafraîchit après chaque blur. L'APL se répercute aussi dans
  * Historique > Revenus (même colonne). Aucune valeur dérivée n'est stockée.
  */
-
-/* Parse une saisie FR (virgule décimale tolérée) ; 0 si vide / invalide. */
-function parseAmount(value: string): number {
-  if (!value.trim()) return 0
-  const n = Number(value.replace(',', '.'))
-  return Number.isFinite(n) ? n : 0
-}
 
 export function FloreInputs({
   month,

@@ -5,6 +5,7 @@ import { Card } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { createClient } from '@/lib/supabase/server'
 import { formatMonthLabel } from '@/lib/month'
+import { formatEuros } from '@/lib/format'
 import { getMonthContext } from '@/lib/data/activeMonth'
 import { getCreditsInProgress, type CreditRow } from '@/lib/data/credits'
 import { getUnplannedDetail } from '@/lib/data/unplanned'
@@ -47,13 +48,6 @@ type BudgetRow = {
   planned_amount: number
   expense_id: string
   expenses: { label: string; color: string; category: CategoryType } | null
-}
-
-function formatEuros(n: number): string {
-  return `${n.toLocaleString('fr-FR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })} €`
 }
 
 export default async function DashboardPage() {

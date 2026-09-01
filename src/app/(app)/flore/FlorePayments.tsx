@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { Trash2 } from 'lucide-react'
 import { Button, Input, Modal, ConfirmModal } from '@/components/ui'
 import { formatDateLong, todayIso } from '@/lib/month'
+import { formatEurosCents, parseAmount } from '@/lib/format'
 import {
   addFlorePayment,
   deleteFlorePayment,
@@ -19,20 +20,6 @@ import type { FlorePayment } from '@/types/database'
  * `totalDue` est la dette théorique « Flore me doit » calculée en 10a, INCHANGÉE
  * par les remboursements : on l'utilise seulement pour le « reste à recevoir ».
  */
-
-/* Parse une saisie FR (virgule décimale tolérée) ; 0 si vide / invalide. */
-function parseAmount(value: string): number {
-  if (!value.trim()) return 0
-  const n = Number(value.replace(',', '.'))
-  return Number.isFinite(n) ? n : 0
-}
-
-function formatEuros(n: number): string {
-  return `${n.toLocaleString('fr-FR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} €`
-}
 
 export function FlorePayments({
   payments,
@@ -84,7 +71,7 @@ export function FlorePayments({
         <div className="flex items-center justify-between text-sm text-ink-2">
           <span>Déjà remboursé</span>
           <span className="tabular font-medium text-ink">
-            {formatEuros(alreadyPaid)}
+            {formatEurosCents(alreadyPaid)}
           </span>
         </div>
         {settled ? (
@@ -96,7 +83,7 @@ export function FlorePayments({
           <div className="flex items-center justify-between text-sm">
             <span className="text-ink-2">Reste à recevoir</span>
             <span className="tabular font-medium text-ink">
-              {formatEuros(remaining)}
+              {formatEurosCents(remaining)}
             </span>
           </div>
         )}
@@ -142,7 +129,7 @@ function PaymentRow({
         )}
       </div>
       <span className="tabular shrink-0 text-sm font-medium text-ink">
-        {formatEuros(payment.amount)}
+        {formatEurosCents(payment.amount)}
       </span>
       {!readOnly && (
         <button

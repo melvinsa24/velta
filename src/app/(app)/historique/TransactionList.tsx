@@ -13,6 +13,7 @@ import {
   PARENT_ORDER,
 } from '@/lib/categoryMeta'
 import { formatDayLabel } from '@/lib/month'
+import { formatEuros } from '@/lib/format'
 import {
   TransactionForm,
   type ExpenseOption,
@@ -36,13 +37,6 @@ export type TransactionRow = Transaction & {
 
 /* Couleur neutre des transactions imprévues (sans dépense) — token --ink-3. */
 const NEUTRAL_COLOR = 'var(--ink-3)'
-
-function formatEuros(n: number): string {
-  return `${n.toLocaleString('fr-FR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })} €`
-}
 
 /*
  * Valeur du filtre catégorie. On préfixe pour lever l'ambiguïté entre un Type

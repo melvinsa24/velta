@@ -10,6 +10,7 @@ import {
   CATEGORY_TYPE_OPTIONS,
   SHARE_MODE_OPTIONS,
 } from '@/lib/categoryMeta'
+import { parseAmount } from '@/lib/format'
 import {
   archiveExpense,
   createExpense,
@@ -42,13 +43,6 @@ function Field({
       {children}
     </div>
   )
-}
-
-/* Parse une saisie FR (virgule décimale tolérée) ; 0 si vide / invalide. */
-function parseAmount(value: string): number {
-  if (!value.trim()) return 0
-  const n = Number(value.replace(',', '.'))
-  return Number.isFinite(n) ? n : 0
 }
 
 /*

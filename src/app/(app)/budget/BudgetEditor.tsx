@@ -6,6 +6,7 @@ import { Plus, CopyPlus } from 'lucide-react'
 import { Button, Card, Modal } from '@/components/ui'
 import { ClosedMonthBanner } from '@/components/layout/ClosedMonthBanner'
 import { cn } from '@/lib/cn'
+import { formatEuros, parseAmount } from '@/lib/format'
 import {
   CATEGORIES_BY_PARENT,
   CATEGORY_PARENT,
@@ -44,19 +45,6 @@ const TARGET_KEY: Record<ParentType, keyof Targets> = {
   besoin: 'needs',
   envie: 'wants',
   epargne: 'savings',
-}
-
-/* Parse une saisie FR (virgule décimale tolérée) ; 0 si vide / invalide. */
-function parseAmount(value: string): number {
-  const n = Number(value.replace(',', '.'))
-  return Number.isFinite(n) ? n : 0
-}
-
-function formatEuros(n: number): string {
-  return `${n.toLocaleString('fr-FR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })} €`
 }
 
 /* Construit la table { expense_id -> montant (string) } depuis les lignes du mois. */
