@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { formatEuros } from '@/lib/format'
+import { isOverspent } from '@/lib/calculs'
 import {
   ExpenseQuickEntrySheet,
   type ExpenseTx,
@@ -15,6 +16,9 @@ import type { ExpenseOption } from '@/components/transaction/TransactionForm'
  * Ligne d'une dépense prévue du Dashboard : pastille couleur, libellé + prévu,
  * réel, mini-jauge --ink (proportion réel/prévu). Bordure --down + message si
  * dépassement ; jauge --warn dès 80 % du prévu (SPECS §7.1).
+ *
+ * Le dépassement passe par `isOverspent` (seuil commun, cf. lib/calculs) : à
+ * 100 % du prévu la ligne reste normale, résidu d'arrondi compris.
  *
  * La ligne est tappable et ouvre la saisie rapide (`ExpenseQuickEntrySheet`) —
  * raccourci qui s'ajoute au FAB, lequel reste inchangé. Elle reste tappable sur
@@ -43,7 +47,7 @@ export function ExpenseLineCard({
 
   const ratio = planned > 0 ? real / planned : real > 0 ? 1 : 0
   const width = Math.max(0, Math.min(100, ratio * 100))
-  const over = real > planned && planned > 0
+  const over = planned > 0 && isOverspent(real, planned)
   const warn = ratio >= 0.8
   const barTone = warn ? 'bg-warn' : 'bg-ink'
 

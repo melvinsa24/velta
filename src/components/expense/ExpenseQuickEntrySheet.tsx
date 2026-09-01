@@ -7,6 +7,7 @@ import { ClosedMonthBanner } from '@/components/layout/ClosedMonthBanner'
 import { cn } from '@/lib/cn'
 import { defaultDateForMonth, formatDayLabel } from '@/lib/month'
 import { formatEuros, formatEurosCents, parseAmount } from '@/lib/format'
+import { isOverspent } from '@/lib/calculs'
 import { createTransaction } from '@/lib/actions/transactions'
 import {
   TransactionForm,
@@ -174,6 +175,9 @@ function QuickEntryBody({
 }) {
   const spent = transactions.reduce((sum, t) => sum + t.amount, 0)
   const remaining = round2(planned - spent)
+  // Restant en rouge exactement quand la ligne du Dashboard qui ouvre la sheet
+  // est en dépassement : même seuil, donc jamais l'une sans l'autre.
+  const overspent = isOverspent(spent, planned)
   // Rien à proposer si la dépense n'a pas de prévu ou est déjà entièrement
   // couverte : champ vide, CTA éteint tant qu'aucun montant n'est saisi.
   const hasRemaining = planned > 0 && remaining > 0
@@ -244,7 +248,7 @@ function QuickEntryBody({
           Prévu {planned > 0 ? formatEuros(planned) : '—'} · Dépensé{' '}
           {formatEuros(spent)} · Restant{' '}
           {planned > 0 ? (
-            <span className={cn(remaining < 0 && 'font-medium text-down')}>
+            <span className={cn(overspent && 'font-medium text-down')}>
               {formatEuros(remaining)}
             </span>
           ) : (

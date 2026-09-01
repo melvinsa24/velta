@@ -5,6 +5,7 @@ import { Trash2 } from 'lucide-react'
 import { Button, Input, Modal, ConfirmModal } from '@/components/ui'
 import { formatDateLong, todayIso } from '@/lib/month'
 import { formatEurosCents, parseAmount } from '@/lib/format'
+import { isCleared } from '@/lib/calculs'
 import {
   addFlorePayment,
   deleteFlorePayment,
@@ -36,7 +37,9 @@ export function FlorePayments({
 
   const alreadyPaid = payments.reduce((sum, p) => sum + p.amount, 0)
   const remaining = totalDue - alreadyPaid
-  const settled = remaining <= 0
+  // Soldé au centime près : un remboursement pile ne laisse pas toujours un
+  // écart nul (parts au prorata à 7 décimales, cf. lib/calculs).
+  const settled = isCleared(remaining)
 
   return (
     <section className="flex flex-col gap-3">

@@ -99,3 +99,41 @@ export function floreShare(
   if (shareMode === 'split_prorata') return plannedAmount * ratioFlore
   return 0
 }
+
+// --- Seuils de comparaison des montants ------------------------------------
+//
+// Aucun montant affiché ne doit être comparé à un autre par égalité stricte :
+// une part au prorata (`total × ratio`) tombe sur 7 décimales, alors que la
+// transaction qui la solde est saisie arrondie au centime. Comparés tels quels,
+// deux montants « identiques » à l'écran diffèrent d'un résidu de l'ordre de
+// 1e-7 — assez pour déclencher un « ⚠ Dépassé de 0 € » ou empêcher un « Solde
+// apuré ». Ces deux seuils sont la source unique de ces comparaisons.
+
+/** Tolérance d'égalité entre deux montants : le centime. */
+export const CENT_EPSILON = 0.01
+
+/**
+ * Dépassement à partir duquel on alerte sur une dépense (décision produit) :
+ * en dessous d'un euro, le débordement n'est pas signalé — il resterait du
+ * bruit sur une ligne de budget, et couvre au passage tout résidu d'arrondi.
+ */
+export const OVERSPEND_THRESHOLD = 1
+
+/**
+ * Dépassement RÉEL d'un prévu : le réel excède le prévu d'au moins 1 €.
+ * Pilote l'alerte + la bordure --down d'une ligne de dépense (SPECS §7.1). À
+ * exactement 100 % du prévu — résidu d'arrondi compris — la ligne reste normale.
+ */
+export function isOverspent(real: number, planned: number): boolean {
+  return real - planned >= OVERSPEND_THRESHOLD
+}
+
+/**
+ * Solde couvert : ce qu'il reste à recevoir tient dans le centime. Pendant de
+ * `isOverspent` pour les soldes du module Flore, mais volontairement PLUS
+ * strict : une dette se solde au centime près, donc 0,80 € restant dû reste
+ * « Reste à recevoir » là où 0,80 € de débordement ne déclenche pas d'alerte.
+ */
+export function isCleared(remaining: number): boolean {
+  return remaining <= CENT_EPSILON
+}

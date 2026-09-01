@@ -4,7 +4,7 @@ import { ClosedMonthBanner } from '@/components/layout/ClosedMonthBanner'
 import { Card } from '@/components/ui'
 import { createClient } from '@/lib/supabase/server'
 import { getMonthContext } from '@/lib/data/activeMonth'
-import { floreRatio, floreShare } from '@/lib/calculs'
+import { floreRatio, floreShare, isCleared } from '@/lib/calculs'
 import { formatEurosCents } from '@/lib/format'
 import { FloreInputs } from './FloreInputs'
 import { FloreProrataExpenses } from './FloreProrataExpenses'
@@ -144,7 +144,9 @@ export default async function FlorePage({
   // `totalDue` reste la référence des charges ; seul l'affichage héro change.
   const totalRembourse = payments.reduce((sum, p) => sum + p.amount, 0)
   const soldeRestant = Math.max(0, totalDue - totalRembourse)
-  const apure = soldeRestant === 0
+  // Égalité au centime, jamais stricte : les parts au prorata tombent sur 7
+  // décimales et un remboursement pile laisserait un résidu (cf. lib/calculs).
+  const apure = isCleared(soldeRestant)
 
   return (
     <>
